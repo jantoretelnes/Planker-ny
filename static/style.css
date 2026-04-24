@@ -1,0 +1,102 @@
+body {
+ font-family: Arial, sans-serif;
+ background-color: #f4f4f4;
+ margin: 0;
+ padding: 0;
+}
+.container {
+ max-width: 800px;
+ margin: 20px auto;
+ padding: 20px;
+ background-color: #fff;
+ box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+ border-radius: 8px;
+}
+h1, h2 {
+ color: #333;
+}
+.input-section {
+ margin-bottom: 20px;
+}
+.input-section label {
+ display: block;
+ margin-bottom: 5px;
+ font-weight: bold;
+}
+.input-section input {
+ padding: 10px;
+ margin-bottom: 10px;
+ border: 1px solid #ccc;
+ border-radius: 4px;
+}
+button {
+ padding: 10px 20px;
+ background-color: #007bff;
+ color: #fff;
+ border: none;
+ border-radius: 4px;
+ cursor: pointer;
+}
+button:hover {
+ background-color: #0056b3;
+}
+button.secondary-btn {
+ background-color: #6c757d;
+ padding: 8px 15px;
+ font-size: 14px;
+}
+button.secondary-btn:hover {
+ background-color: #5a6268;
+}
+.barcode-scanner-section {
+ margin-bottom: 20px;
+ padding: 15px;
+ border: 1px solid #ddd;
+ border-radius: 4px;
+ background-color: #f9f9f9;
+}
+#barcode-scanner-container {
+ padding: 15px;
+ border: 1px solid #ccc;
+ border-radius: 4px;
+ background-color: #fff;
+ margin-top: 10px;
+}
+#scanner-status {
+ font-weight: bold;
+ color: #007bff;
+ margin-bottom: 10px;
+}
+#barcode-video {
+ display: block;
+ margin: 10px auto;
+}
+#barcode-input {
+ padding: 10px;
+ margin-top: 10px;
+ border: 1px solid #ccc;
+ border-radius: 4px;
+}
+.results-section {
+ margin-top: 20px;
+}
+.stock-item {
+ padding: 10px;
+ margin-bottom: 10px;
+ border: 1px solid #ccc;
+ border-radius: 4px;
+ background-color: #d4edda;
+}
+.stock-item h3 {
+ margin-top: 0;
+}
+.stock-item ul {
+ list-style-type: none;
+ padding-left: 0;
+}
+.stock-item ul li {
+ background-color: #f4f4f4;
+ margin-bottom: 5px;
+ padding: 5px;
+ border-radius: 4px;
+}

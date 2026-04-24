@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+ <meta charset="UTF-8" />
+ <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+ <title>1D Cutting Stock Optimizer</title>
+ <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+ <div class="container">
+   <h1>1D Cutting Stock Optimizer</h1>
+   <div class="input-section">
+     <h2>Parameters</h2>
+     <label for="blade-width">Blade Width (mm):</label>
+     <input type="number" step="0.01" id="blade-width" min="0" value="6" style="width: 8ch;">
+   </div>
+   <div class="input-section">
+     <h2>Wanted Lengths</h2>
+     <div id="wanted-lengths-container">
+       <div class="input-group">
+         <input type="number" step="0.01" class="wanted-length" placeholder="Length (cm)" style="width: 8ch;">
+         <input type="number" step="1" class="wanted-quantity" placeholder="Qty" style="width: 8ch;">
+       </div>
+     </div>
+     <button id="add-wanted-length">Add Wanted Length</button>
+   </div>
+   <div class="input-section">
+     <h2>Measured Stock Lengths</h2>
+     <div class="barcode-scanner-section">
+       <button id="toggle-barcode-scanner" class="secondary-btn">📷 Scan Barcode</button>
+       <div id="barcode-scanner-container" style="display: none;">
+         <div id="scanner-status">Ready to scan</div>
+         <video id="barcode-video" width="300" height="300" style="border: 1px solid #ccc;"></video>
+         <input type="text" id="barcode-input" placeholder="Or paste barcode here" style="width: 100%; margin-top: 10px;">
+         <button id="close-scanner" class="secondary-btn">Close Scanner</button>
+       </div>
+     </div>
+     <div id="measured-lengths-container">
+       <div class="input-group">
+         <input type="number" step="0.01" class="measured-length" placeholder="Length (cm)" style="width: 8ch;">
+         <input type="number" step="1" class="measured-quantity" placeholder="Qty" style="width: 8ch;">
+       </div>
+     </div>
+     <button id="add-measured-length">Add Measured Length</button>
+   </div>
+   <div class="results-section">
+     <div class="cutting-plan" id="results"></div>
+     <div class="suggested-lengths">
+       <h2>Suggested Next Stock Lengths</h2>
+       <ul id="suggested-lengths-list"></ul>
+     </div>
+   </div>
+ </div>
+ <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
