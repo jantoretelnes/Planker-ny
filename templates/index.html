@@ -1,56 +1,106 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="nb">
 <head>
- <meta charset="UTF-8" />
- <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
- <title>1D Cutting Stock Optimizer</title>
- <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Plankeplukker'n</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
- <div class="container">
-   <h1>1D Cutting Stock Optimizer</h1>
-   <div class="input-section">
-     <h2>Parameters</h2>
-     <label for="blade-width">Blade Width (mm):</label>
-     <input type="number" step="0.01" id="blade-width" min="0" value="6" style="width: 8ch;">
-   </div>
-   <div class="input-section">
-     <h2>Wanted Lengths</h2>
-     <div id="wanted-lengths-container">
-       <div class="input-group">
-         <input type="number" step="0.01" class="wanted-length" placeholder="Length (cm)" style="width: 8ch;">
-         <input type="number" step="1" class="wanted-quantity" placeholder="Qty" style="width: 8ch;">
-       </div>
-     </div>
-     <button id="add-wanted-length">Add Wanted Length</button>
-   </div>
-   <div class="input-section">
-     <h2>Measured Stock Lengths</h2>
-     <div class="barcode-scanner-section">
-       <button id="toggle-barcode-scanner" class="secondary-btn">📷 Scan Barcode</button>
-       <div id="barcode-scanner-container" style="display: none;">
-         <div id="scanner-status">Ready to scan</div>
-         <video id="barcode-video" width="300" height="300" style="border: 1px solid #ccc;"></video>
-         <input type="text" id="barcode-input" placeholder="Or paste barcode here" style="width: 100%; margin-top: 10px;">
-         <button id="close-scanner" class="secondary-btn">Close Scanner</button>
-       </div>
-     </div>
-     <div id="measured-lengths-container">
-       <div class="input-group">
-         <input type="number" step="0.01" class="measured-length" placeholder="Length (cm)" style="width: 8ch;">
-         <input type="number" step="1" class="measured-quantity" placeholder="Qty" style="width: 8ch;">
-       </div>
-     </div>
-     <button id="add-measured-length">Add Measured Length</button>
-   </div>
-   <div class="results-section">
-     <div class="cutting-plan" id="results"></div>
-     <div class="suggested-lengths">
-       <h2>Suggested Next Stock Lengths</h2>
-       <ul id="suggested-lengths-list"></ul>
-     </div>
-   </div>
- </div>
- <script src="{{ url_for('static', filename='script.js') }}"></script>
+<div class="container">
+  <div class="header">
+    <h1>🪵 Plankeplukker'n</h1>
+    <p class="subtitle">Optimal kutteplanlegger for trelast</p>
+  </div>
+
+  <!-- Innstillinger -->
+  <div class="parameters">
+    <h2>⚙️ Innstillinger</h2>
+    <div class="blade-width">
+      <label for="blade-width">Kuttbredde (cm):</label>
+      <input type="number" step="0.1" id="blade-width" min="0" value="0.3" style="width:8ch;">
+      <label for="stock-unit-price">Meterpris (kr):</label>
+      <input type="number" step="0.01" id="stock-unit-price" min="0" value="19.95" style="width:8ch;">
+    </div>
+  </div>
+
+  <!-- Strekkodeskanning -->
+  <div class="barcode-section">
+    <h2>📷 Skanning av målte lengder</h2>
+    <div id="scanned-barcodes" class="scanned-list"></div>
+  </div>
+
+  <!-- Kameramodal -->
+  <div id="camera-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Skann strekkode med kamera</h2>
+        <button id="close-camera-btn" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="camera-select-wrapper" style="margin-bottom:12px; display:none;">
+          <label for="camera-select" style="font-weight:600; margin-right:8px;">Velg kamera:</label>
+          <select id="camera-select" style="padding:6px 10px; border-radius:5px; border:1px solid #bbb; font-size:14px;"></select>
+        </div>
+        <video id="camera-video" style="width:100%; max-width:500px; border-radius:8px; border:2px solid #ddd; display:block; margin:0 auto;" playsinline muted></video>
+        <canvas id="scan-canvas" style="display:none;"></canvas>
+        <div id="camera-status" class="camera-status"></div>
+      </div>
+      <div class="modal-footer">
+        <p id="scan-result" class="scan-result"></p>
+        <button id="close-camera-modal-btn" class="close-btn-footer">Lukk</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Inndatakolonner -->
+  <div class="flex-columns">
+    <div class="column">
+      <h2>📋 Ønskede lengder</h2>
+      <div id="wanted-total-length" class="total-label"></div>
+      <div id="wanted-lengths-container">
+        <div class="input-group">
+          <input type="number" step="1" class="wanted-length" placeholder="Lengde (cm)" style="width:12ch;">
+          <input type="number" step="1" class="wanted-quantity" value="1" placeholder="Antall" style="width:8ch;">
+          <button class="remove-btn" onclick="this.parentElement.remove(); sendDataToBackend();">Fjern</button>
+        </div>
+      </div>
+      <button id="add-wanted-length">+ Legg til lengde</button>
+    </div>
+
+    <div class="column">
+      <h2>📏 Målte lengder</h2>
+      <div id="measured-lengths-container">
+        <div class="input-group">
+          <input type="number" step="1" class="measured-length" placeholder="Lengde (cm)" style="width:12ch;">
+          <input type="number" step="1" class="measured-quantity" value="1" placeholder="Antall" style="width:8ch;">
+          <button class="remove-btn" onclick="this.parentElement.remove(); sendDataToBackend();">Fjern</button>
+        </div>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
+        <button id="add-measured-length">+ Legg til lengde</button>
+        <button id="start-camera-btn" class="camera-btn">📷 Skann strekkode</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Forslag til plankelengder -->
+  <div id="suggestions-section" class="suggestions-section" style="display:none;">
+    <h2>💡 Forslag til plankelengder å kjøpe</h2>
+    <p class="suggestions-desc">Basert på dine ønskede lengder – rangert etter minst svinn:</p>
+    <div id="suggestions-container" class="suggestions-grid"></div>
+  </div>
+
+  <!-- Resultater -->
+  <div class="results-section">
+    <div id="results-header" style="display:none;" class="results-header">
+      <h2>📊 Kuttplan</h2>
+      <button id="export-pdf-btn" class="pdf-btn">📄 Last ned PDF</button>
+    </div>
+    <div class="cutting-plan" id="results"></div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>

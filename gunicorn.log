@@ -1,0 +1,778 @@
+[2025-06-06 16:36:24 +0000] [19] [INFO] Starting gunicorn 23.0.0
+[2025-06-06 16:36:24 +0000] [19] [INFO] Listening at: http://0.0.0.0:8080 (19)
+[2025-06-06 16:36:24 +0000] [19] [INFO] Using worker: sync
+[2025-06-06 16:36:24 +0000] [20] [INFO] Booting worker with pid: 20
+[2025-06-06 16:36:24 +0000] [21] [INFO] Booting worker with pid: 21
+[2025-06-06 16:37:42 +0000] [19] [INFO] Starting gunicorn 23.0.0
+[2025-06-06 16:37:42 +0000] [19] [INFO] Listening at: http://0.0.0.0:8080 (19)
+[2025-06-06 16:37:42 +0000] [19] [INFO] Using worker: sync
+[2025-06-06 16:37:42 +0000] [20] [INFO] Booting worker with pid: 20
+[2025-06-06 16:37:42 +0000] [21] [INFO] Booting worker with pid: 21
+[2025-06-09 22:02:59 +0000] [19] [INFO] Handling signal: hup
+[2025-06-09 22:02:59 +0000] [19] [INFO] Hang up: Master
+[2025-06-09 22:02:59 +0000] [20] [INFO] Worker exiting (pid: 20)
+[2025-06-09 22:02:59 +0000] [21] [INFO] Worker exiting (pid: 21)
+[2025-06-09 22:02:59 +0000] [601] [INFO] Booting worker with pid: 601
+[2025-06-09 22:02:59 +0000] [602] [INFO] Booting worker with pid: 602
+[2025-06-09 22:10:19 +0000] [19] [INFO] Handling signal: hup
+[2025-06-09 22:10:19 +0000] [19] [INFO] Hang up: Master
+[2025-06-09 22:10:19 +0000] [665] [INFO] Booting worker with pid: 665
+[2025-06-09 22:10:19 +0000] [601] [INFO] Worker exiting (pid: 601)
+[2025-06-09 22:10:19 +0000] [602] [INFO] Worker exiting (pid: 602)
+[2025-06-09 22:10:19 +0000] [666] [INFO] Booting worker with pid: 666
+[2025-06-09 22:10:19 +0000] [19] [ERROR] Worker (pid:602) was sent SIGTERM!
+[2025-06-09 22:13:37 +0000] [19] [INFO] Handling signal: hup
+[2025-06-09 22:13:37 +0000] [19] [INFO] Hang up: Master
+[2025-06-09 22:13:37 +0000] [665] [INFO] Worker exiting (pid: 665)
+[2025-06-09 22:13:37 +0000] [666] [INFO] Worker exiting (pid: 666)
+[2025-06-09 22:13:37 +0000] [729] [INFO] Booting worker with pid: 729
+[2025-06-09 22:13:37 +0000] [730] [INFO] Booting worker with pid: 730
+[2025-06-09 22:13:37 +0000] [729] [ERROR] Exception in worker process
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/arbiter.py", line 608, in spawn_worker
+    worker.init_process()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/base.py", line 135, in init_process
+    self.load_wsgi()
+    ~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/base.py", line 147, in load_wsgi
+    self.wsgi = self.app.wsgi()
+                ~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/base.py", line 66, in wsgi
+    self.callable = self.load()
+                    ~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 57, in load
+    return self.load_wsgiapp()
+           ~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 47, in load_wsgiapp
+    return util.import_app(self.app_uri)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/util.py", line 370, in import_app
+    mod = importlib.import_module(module)
+  File "/usr/local/lib/python3.13/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1022, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1160, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1090, in source_to_code
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/config/Planker-ny/app.py", line 46
+    return jsonify({"error": "Totalt målte lengder: "sum(measured_lengths) " er mindre enn totalt ønskede lengder:" sum(wanted_lengths)}), 400
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+SyntaxError: invalid syntax. Perhaps you forgot a comma?
+[2025-06-09 22:13:37 +0000] [730] [ERROR] Exception in worker process
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/arbiter.py", line 608, in spawn_worker
+    worker.init_process()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/base.py", line 135, in init_process
+    self.load_wsgi()
+    ~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/base.py", line 147, in load_wsgi
+    self.wsgi = self.app.wsgi()
+                ~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/base.py", line 66, in wsgi
+    self.callable = self.load()
+                    ~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 57, in load
+    return self.load_wsgiapp()
+           ~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 47, in load_wsgiapp
+    return util.import_app(self.app_uri)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/util.py", line 370, in import_app
+    mod = importlib.import_module(module)
+  File "/usr/local/lib/python3.13/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1022, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1160, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1090, in source_to_code
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/config/Planker-ny/app.py", line 46
+    return jsonify({"error": "Totalt målte lengder: "sum(measured_lengths) " er mindre enn totalt ønskede lengder:" sum(wanted_lengths)}), 400
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+SyntaxError: invalid syntax. Perhaps you forgot a comma?
+[2025-06-09 22:13:37 +0000] [729] [INFO] Worker exiting (pid: 729)
+[2025-06-09 22:13:37 +0000] [730] [INFO] Worker exiting (pid: 730)
+[2025-06-09 22:13:37 +0000] [19] [ERROR] Worker (pid:729) exited with code 3
+[2025-06-09 22:13:37 +0000] [19] [ERROR] Worker (pid:730) was sent SIGTERM!
+[2025-06-09 22:13:37 +0000] [19] [ERROR] Worker (pid:666) was sent SIGTERM!
+[2025-06-09 22:13:37 +0000] [19] [ERROR] Worker (pid:665) was sent SIGTERM!
+[2025-06-09 22:13:37 +0000] [19] [ERROR] Shutting down: Master
+[2025-06-09 22:13:37 +0000] [19] [ERROR] Reason: Worker failed to boot.
+[2025-06-09 22:14:06 +0000] [19] [INFO] Starting gunicorn 23.0.0
+[2025-06-09 22:14:06 +0000] [19] [INFO] Listening at: http://0.0.0.0:8080 (19)
+[2025-06-09 22:14:06 +0000] [19] [INFO] Using worker: sync
+[2025-06-09 22:14:06 +0000] [20] [INFO] Booting worker with pid: 20
+[2025-06-09 22:14:06 +0000] [20] [ERROR] Exception in worker process
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/arbiter.py", line 608, in spawn_worker
+    worker.init_process()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/base.py", line 135, in init_process
+    self.load_wsgi()
+    ~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/base.py", line 147, in load_wsgi
+    self.wsgi = self.app.wsgi()
+                ~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/base.py", line 66, in wsgi
+    self.callable = self.load()
+                    ~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 57, in load
+    return self.load_wsgiapp()
+           ~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 47, in load_wsgiapp
+    return util.import_app(self.app_uri)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/util.py", line 370, in import_app
+    mod = importlib.import_module(module)
+  File "/usr/local/lib/python3.13/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1022, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1160, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1090, in source_to_code
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/config/Planker-ny/app.py", line 46
+    return jsonify({"error": "Totalt målte lengder: "sum(measured_lengths) " er mindre enn totalt ønskede lengder:" sum(wanted_lengths)}), 400
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+SyntaxError: invalid syntax. Perhaps you forgot a comma?
+[2025-06-09 22:14:06 +0000] [20] [INFO] Worker exiting (pid: 20)
+[2025-06-09 22:14:06 +0000] [19] [ERROR] Worker (pid:20) exited with code 3
+[2025-06-09 22:14:06 +0000] [19] [ERROR] Shutting down: Master
+[2025-06-09 22:14:06 +0000] [19] [ERROR] Reason: Worker failed to boot.
+[2025-06-09 22:15:06 +0000] [19] [INFO] Starting gunicorn 23.0.0
+[2025-06-09 22:15:07 +0000] [19] [INFO] Listening at: http://0.0.0.0:8080 (19)
+[2025-06-09 22:15:07 +0000] [19] [INFO] Using worker: sync
+[2025-06-09 22:15:07 +0000] [20] [INFO] Booting worker with pid: 20
+[2025-06-09 22:15:07 +0000] [20] [ERROR] Exception in worker process
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/arbiter.py", line 608, in spawn_worker
+    worker.init_process()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/base.py", line 135, in init_process
+    self.load_wsgi()
+    ~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/base.py", line 147, in load_wsgi
+    self.wsgi = self.app.wsgi()
+                ~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/base.py", line 66, in wsgi
+    self.callable = self.load()
+                    ~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 57, in load
+    return self.load_wsgiapp()
+           ~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 47, in load_wsgiapp
+    return util.import_app(self.app_uri)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/util.py", line 370, in import_app
+    mod = importlib.import_module(module)
+  File "/usr/local/lib/python3.13/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1022, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1160, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1090, in source_to_code
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/config/Planker-ny/app.py", line 46
+    return jsonify({"error": "Totalt målte lengder: "sum(measured_lengths) " er mindre enn totalt ønskede lengder:" sum(wanted_lengths)}), 400
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+SyntaxError: invalid syntax. Perhaps you forgot a comma?
+[2025-06-09 22:15:07 +0000] [20] [INFO] Worker exiting (pid: 20)
+[2025-06-09 22:15:07 +0000] [19] [ERROR] Worker (pid:20) exited with code 3
+[2025-06-09 22:15:07 +0000] [19] [ERROR] Shutting down: Master
+[2025-06-09 22:15:07 +0000] [19] [ERROR] Reason: Worker failed to boot.
+[2025-06-09 22:16:09 +0000] [19] [INFO] Starting gunicorn 23.0.0
+[2025-06-09 22:16:09 +0000] [19] [INFO] Listening at: http://0.0.0.0:8080 (19)
+[2025-06-09 22:16:09 +0000] [19] [INFO] Using worker: sync
+[2025-06-09 22:16:09 +0000] [20] [INFO] Booting worker with pid: 20
+[2025-06-09 22:16:09 +0000] [21] [INFO] Booting worker with pid: 21
+[2025-06-11 11:39:56 +0000] [19] [INFO] Handling signal: hup
+[2025-06-11 11:39:56 +0000] [19] [INFO] Hang up: Master
+[2025-06-11 11:39:56 +0000] [20] [INFO] Worker exiting (pid: 20)
+[2025-06-11 11:39:56 +0000] [21] [INFO] Worker exiting (pid: 21)
+[2025-06-11 11:39:56 +0000] [619] [INFO] Booting worker with pid: 619
+[2025-06-11 11:39:56 +0000] [620] [INFO] Booting worker with pid: 620
+[2025-06-11 11:39:56 +0000] [619] [ERROR] Exception in worker process
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/arbiter.py", line 608, in spawn_worker
+    worker.init_process()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/base.py", line 135, in init_process
+    self.load_wsgi()
+    ~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/base.py", line 147, in load_wsgi
+    self.wsgi = self.app.wsgi()
+                ~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/base.py", line 66, in wsgi
+    self.callable = self.load()
+                    ~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 57, in load
+    return self.load_wsgiapp()
+           ~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 47, in load_wsgiapp
+    return util.import_app(self.app_uri)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/util.py", line 370, in import_app
+    mod = importlib.import_module(module)
+  File "/usr/local/lib/python3.13/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1022, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1160, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1090, in source_to_code
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/config/Planker-ny/app.py", line 46
+    return jsonify({"error": "Totalt målte lengder er mindre enn totalt ønskede lengder." },"Målt":"sum(measured_lengths)"},"Ønsket":"sum(wanted_lengths)"} ), 400
+                                                                                                                          ^
+SyntaxError: closing parenthesis '}' does not match opening parenthesis '('
+[2025-06-11 11:39:56 +0000] [619] [INFO] Worker exiting (pid: 619)
+[2025-06-11 11:39:56 +0000] [620] [ERROR] Exception in worker process
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/arbiter.py", line 608, in spawn_worker
+    worker.init_process()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/base.py", line 135, in init_process
+    self.load_wsgi()
+    ~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/base.py", line 147, in load_wsgi
+    self.wsgi = self.app.wsgi()
+                ~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/base.py", line 66, in wsgi
+    self.callable = self.load()
+                    ~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 57, in load
+    return self.load_wsgiapp()
+           ~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 47, in load_wsgiapp
+    return util.import_app(self.app_uri)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/util.py", line 370, in import_app
+    mod = importlib.import_module(module)
+  File "/usr/local/lib/python3.13/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1022, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1160, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1090, in source_to_code
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/config/Planker-ny/app.py", line 46
+    return jsonify({"error": "Totalt målte lengder er mindre enn totalt ønskede lengder." },"Målt":"sum(measured_lengths)"},"Ønsket":"sum(wanted_lengths)"} ), 400
+                                                                                                                          ^
+SyntaxError: closing parenthesis '}' does not match opening parenthesis '('
+[2025-06-11 11:39:56 +0000] [620] [INFO] Worker exiting (pid: 620)
+[2025-06-11 11:39:56 +0000] [19] [ERROR] Worker (pid:619) exited with code 3
+[2025-06-11 11:39:56 +0000] [19] [ERROR] Worker (pid:620) was sent SIGTERM!
+[2025-06-11 11:39:56 +0000] [19] [ERROR] Worker (pid:20) was sent SIGTERM!
+[2025-06-11 11:39:56 +0000] [19] [ERROR] Worker (pid:21) was sent SIGTERM!
+[2025-06-11 11:39:56 +0000] [19] [ERROR] Shutting down: Master
+[2025-06-11 11:39:56 +0000] [19] [ERROR] Reason: Worker failed to boot.
+[2025-06-11 11:41:15 +0000] [152] [INFO] Starting gunicorn 23.0.0
+[2025-06-11 11:41:15 +0000] [152] [INFO] Listening at: http://0.0.0.0:8080 (152)
+[2025-06-11 11:41:15 +0000] [152] [INFO] Using worker: sync
+[2025-06-11 11:41:15 +0000] [153] [INFO] Booting worker with pid: 153
+[2025-06-11 11:41:15 +0000] [153] [ERROR] Exception in worker process
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/arbiter.py", line 608, in spawn_worker
+    worker.init_process()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/base.py", line 135, in init_process
+    self.load_wsgi()
+    ~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/base.py", line 147, in load_wsgi
+    self.wsgi = self.app.wsgi()
+                ~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/base.py", line 66, in wsgi
+    self.callable = self.load()
+                    ~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 57, in load
+    return self.load_wsgiapp()
+           ~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 47, in load_wsgiapp
+    return util.import_app(self.app_uri)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/util.py", line 370, in import_app
+    mod = importlib.import_module(module)
+  File "/usr/local/lib/python3.13/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1022, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1160, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1090, in source_to_code
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/config/Planker-ny/app.py", line 46
+    return jsonify({"error": "Totalt målte lengder er mindre enn totalt ønskede lengder." },"Målt":"sum(measured_lengths)"},"Ønsket":"sum(wanted_lengths)"} ), 400
+                                                                                                                          ^
+SyntaxError: closing parenthesis '}' does not match opening parenthesis '('
+[2025-06-11 11:41:15 +0000] [153] [INFO] Worker exiting (pid: 153)
+[2025-06-11 11:41:15 +0000] [152] [ERROR] Worker (pid:153) exited with code 3
+[2025-06-11 11:41:15 +0000] [152] [ERROR] Shutting down: Master
+[2025-06-11 11:41:15 +0000] [152] [ERROR] Reason: Worker failed to boot.
+[2025-06-11 11:42:26 +0000] [152] [INFO] Starting gunicorn 23.0.0
+[2025-06-11 11:42:26 +0000] [152] [INFO] Listening at: http://0.0.0.0:8080 (152)
+[2025-06-11 11:42:26 +0000] [152] [INFO] Using worker: sync
+[2025-06-11 11:42:26 +0000] [153] [INFO] Booting worker with pid: 153
+[2025-06-11 11:42:26 +0000] [153] [ERROR] Exception in worker process
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/arbiter.py", line 608, in spawn_worker
+    worker.init_process()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/base.py", line 135, in init_process
+    self.load_wsgi()
+    ~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/base.py", line 147, in load_wsgi
+    self.wsgi = self.app.wsgi()
+                ~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/base.py", line 66, in wsgi
+    self.callable = self.load()
+                    ~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 57, in load
+    return self.load_wsgiapp()
+           ~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 47, in load_wsgiapp
+    return util.import_app(self.app_uri)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/util.py", line 370, in import_app
+    mod = importlib.import_module(module)
+  File "/usr/local/lib/python3.13/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1022, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1160, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1090, in source_to_code
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/config/Planker-ny/app.py", line 46
+    return jsonify({"error": "Totalt målte lengder er mindre enn totalt ønskede lengder." },"Målt":"sum(measured_lengths)"},"Ønsket":"sum(wanted_lengths)"} ), 400
+                                                                                                                          ^
+SyntaxError: closing parenthesis '}' does not match opening parenthesis '('
+[2025-06-11 11:42:26 +0000] [153] [INFO] Worker exiting (pid: 153)
+[2025-06-11 11:42:26 +0000] [152] [ERROR] Worker (pid:153) exited with code 3
+[2025-06-11 11:42:26 +0000] [152] [ERROR] Shutting down: Master
+[2025-06-11 11:42:26 +0000] [152] [ERROR] Reason: Worker failed to boot.
+[2025-06-11 11:43:44 +0000] [152] [INFO] Starting gunicorn 23.0.0
+[2025-06-11 11:43:44 +0000] [152] [INFO] Listening at: http://0.0.0.0:8080 (152)
+[2025-06-11 11:43:44 +0000] [152] [INFO] Using worker: sync
+[2025-06-11 11:43:44 +0000] [153] [INFO] Booting worker with pid: 153
+[2025-06-11 11:43:44 +0000] [153] [ERROR] Exception in worker process
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/arbiter.py", line 608, in spawn_worker
+    worker.init_process()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/base.py", line 135, in init_process
+    self.load_wsgi()
+    ~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/base.py", line 147, in load_wsgi
+    self.wsgi = self.app.wsgi()
+                ~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/base.py", line 66, in wsgi
+    self.callable = self.load()
+                    ~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 57, in load
+    return self.load_wsgiapp()
+           ~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 47, in load_wsgiapp
+    return util.import_app(self.app_uri)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/util.py", line 370, in import_app
+    mod = importlib.import_module(module)
+  File "/usr/local/lib/python3.13/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1022, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1160, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1090, in source_to_code
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/config/Planker-ny/app.py", line 46
+    return jsonify({"error": "Totalt målte lengder er mindre enn totalt ønskede lengder." },"Målt":"sum(measured_lengths)"},"Ønsket":"sum(wanted_lengths)"} ), 400
+                                                                                                                          ^
+SyntaxError: closing parenthesis '}' does not match opening parenthesis '('
+[2025-06-11 11:43:44 +0000] [153] [INFO] Worker exiting (pid: 153)
+[2025-06-11 11:43:44 +0000] [152] [ERROR] Worker (pid:153) exited with code 3
+[2025-06-11 11:43:44 +0000] [152] [ERROR] Shutting down: Master
+[2025-06-11 11:43:44 +0000] [152] [ERROR] Reason: Worker failed to boot.
+[2025-06-11 11:45:39 +0000] [152] [INFO] Starting gunicorn 23.0.0
+[2025-06-11 11:45:39 +0000] [152] [INFO] Listening at: http://0.0.0.0:8080 (152)
+[2025-06-11 11:45:39 +0000] [152] [INFO] Using worker: sync
+[2025-06-11 11:45:39 +0000] [153] [INFO] Booting worker with pid: 153
+[2025-06-11 11:45:39 +0000] [153] [ERROR] Exception in worker process
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/arbiter.py", line 608, in spawn_worker
+    worker.init_process()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/base.py", line 135, in init_process
+    self.load_wsgi()
+    ~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/base.py", line 147, in load_wsgi
+    self.wsgi = self.app.wsgi()
+                ~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/base.py", line 66, in wsgi
+    self.callable = self.load()
+                    ~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 57, in load
+    return self.load_wsgiapp()
+           ~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 47, in load_wsgiapp
+    return util.import_app(self.app_uri)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/util.py", line 370, in import_app
+    mod = importlib.import_module(module)
+  File "/usr/local/lib/python3.13/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1022, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1160, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1090, in source_to_code
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/config/Planker-ny/app.py", line 46
+    return jsonify({"error": "Totalt målte lengder er mindre enn totalt ønskede lengder." },"Målt":"sum(measured_lengths)"},"Ønsket":"sum(wanted_lengths)"} ), 400
+                                                                                                                          ^
+SyntaxError: closing parenthesis '}' does not match opening parenthesis '('
+[2025-06-11 11:45:39 +0000] [153] [INFO] Worker exiting (pid: 153)
+[2025-06-11 11:45:39 +0000] [152] [ERROR] Worker (pid:153) exited with code 3
+[2025-06-11 11:45:39 +0000] [154] [INFO] Booting worker with pid: 154
+[2025-06-11 11:45:39 +0000] [154] [ERROR] Exception in worker process
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/arbiter.py", line 608, in spawn_worker
+    worker.init_process()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/base.py", line 135, in init_process
+    self.load_wsgi()
+    ~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/base.py", line 147, in load_wsgi
+    self.wsgi = self.app.wsgi()
+                ~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/base.py", line 66, in wsgi
+    self.callable = self.load()
+                    ~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 57, in load
+    return self.load_wsgiapp()
+           ~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 47, in load_wsgiapp
+    return util.import_app(self.app_uri)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/util.py", line 370, in import_app
+    mod = importlib.import_module(module)
+  File "/usr/local/lib/python3.13/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1022, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1160, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1090, in source_to_code
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/config/Planker-ny/app.py", line 46
+    return jsonify({"error": "Totalt målte lengder er mindre enn totalt ønskede lengder." },"Målt":"sum(measured_lengths)"},"Ønsket":"sum(wanted_lengths)"} ), 400
+                                                                                                                          ^
+SyntaxError: closing parenthesis '}' does not match opening parenthesis '('
+[2025-06-11 11:45:39 +0000] [154] [INFO] Worker exiting (pid: 154)
+[2025-06-11 11:45:39 +0000] [152] [ERROR] Worker (pid:154) exited with code 3
+[2025-06-11 11:45:39 +0000] [152] [ERROR] Shutting down: Master
+[2025-06-11 11:45:39 +0000] [152] [ERROR] Reason: Worker failed to boot.
+[2025-06-11 11:48:32 +0000] [159] [INFO] Starting gunicorn 23.0.0
+[2025-06-11 11:48:32 +0000] [159] [INFO] Listening at: http://0.0.0.0:8080 (159)
+[2025-06-11 11:48:32 +0000] [159] [INFO] Using worker: sync
+[2025-06-11 11:48:32 +0000] [160] [INFO] Booting worker with pid: 160
+[2025-06-11 11:48:32 +0000] [160] [ERROR] Exception in worker process
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/arbiter.py", line 608, in spawn_worker
+    worker.init_process()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/base.py", line 135, in init_process
+    self.load_wsgi()
+    ~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/base.py", line 147, in load_wsgi
+    self.wsgi = self.app.wsgi()
+                ~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/base.py", line 66, in wsgi
+    self.callable = self.load()
+                    ~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 57, in load
+    return self.load_wsgiapp()
+           ~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 47, in load_wsgiapp
+    return util.import_app(self.app_uri)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/util.py", line 370, in import_app
+    mod = importlib.import_module(module)
+  File "/usr/local/lib/python3.13/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1022, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1160, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1090, in source_to_code
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/config/Planker-ny/app.py", line 46
+    return jsonify({"error": "Totalt målte lengder er mindre enn totalt ønskede lengder." },"Målt":"sum(measured_lengths)"},"Ønsket":"sum(wanted_lengths)"} ), 400
+                                                                                                                          ^
+SyntaxError: closing parenthesis '}' does not match opening parenthesis '('
+[2025-06-11 11:48:32 +0000] [160] [INFO] Worker exiting (pid: 160)
+[2025-06-11 11:48:32 +0000] [159] [ERROR] Worker (pid:160) exited with code 3
+[2025-06-11 11:48:32 +0000] [159] [ERROR] Shutting down: Master
+[2025-06-11 11:48:32 +0000] [159] [ERROR] Reason: Worker failed to boot.
+[2025-06-11 11:51:56 +0000] [152] [INFO] Starting gunicorn 23.0.0
+[2025-06-11 11:51:56 +0000] [152] [INFO] Listening at: http://0.0.0.0:8080 (152)
+[2025-06-11 11:51:56 +0000] [152] [INFO] Using worker: sync
+[2025-06-11 11:51:56 +0000] [153] [INFO] Booting worker with pid: 153
+[2025-06-11 11:51:56 +0000] [153] [ERROR] Exception in worker process
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/arbiter.py", line 608, in spawn_worker
+    worker.init_process()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/base.py", line 135, in init_process
+    self.load_wsgi()
+    ~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/base.py", line 147, in load_wsgi
+    self.wsgi = self.app.wsgi()
+                ~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/base.py", line 66, in wsgi
+    self.callable = self.load()
+                    ~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 57, in load
+    return self.load_wsgiapp()
+           ~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/app/wsgiapp.py", line 47, in load_wsgiapp
+    return util.import_app(self.app_uri)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/util.py", line 370, in import_app
+    mod = importlib.import_module(module)
+  File "/usr/local/lib/python3.13/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1022, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1160, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1090, in source_to_code
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/config/Planker-ny/app.py", line 46
+    return jsonify({"error": "Totalt målte lengder er mindre enn totalt ønskede lengder." },{"Målt":"sum(measured_lengths)"},{"Ønsket:"sum(wanted_lengths)"} ), 400
+                                                                                                                                                          ^
+SyntaxError: unterminated string literal (detected at line 46)
+[2025-06-11 11:51:56 +0000] [153] [INFO] Worker exiting (pid: 153)
+[2025-06-11 11:51:57 +0000] [152] [ERROR] Worker (pid:153) exited with code 3
+[2025-06-11 11:51:57 +0000] [152] [ERROR] Shutting down: Master
+[2025-06-11 11:51:57 +0000] [152] [ERROR] Reason: Worker failed to boot.
+[2025-06-11 11:56:59 +0000] [152] [INFO] Starting gunicorn 23.0.0
+[2025-06-11 11:56:59 +0000] [152] [INFO] Listening at: http://0.0.0.0:8080 (152)
+[2025-06-11 11:56:59 +0000] [152] [INFO] Using worker: sync
+[2025-06-11 11:56:59 +0000] [153] [INFO] Booting worker with pid: 153
+[2025-06-11 11:56:59 +0000] [154] [INFO] Booting worker with pid: 154
+[2025-06-12 17:24:04 +0000] [152] [CRITICAL] WORKER TIMEOUT (pid:154)
+[2025-06-12 17:24:04 +0000] [154] [ERROR] Error handling request (no URI read)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/sync.py", line 133, in handle
+    req = next(parser)
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/http/parser.py", line 41, in __next__
+    self.mesg = self.mesg_class(self.cfg, self.unreader, self.source_addr, self.req_count)
+                ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/http/message.py", line 259, in __init__
+    super().__init__(cfg, unreader, peer_addr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/http/message.py", line 60, in __init__
+    unused = self.parse(self.unreader)
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/http/message.py", line 271, in parse
+    self.get_data(unreader, buf, stop=True)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/http/message.py", line 262, in get_data
+    data = unreader.read()
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/http/unreader.py", line 36, in read
+    d = self.chunk()
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/http/unreader.py", line 63, in chunk
+    return self.sock.recv(self.mxchunk)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/base.py", line 204, in handle_abort
+    sys.exit(1)
+    ~~~~~~~~^^^
+SystemExit: 1
+[2025-06-12 17:24:04 +0000] [154] [INFO] Worker exiting (pid: 154)
+[2025-06-12 17:24:04 +0000] [217] [INFO] Booting worker with pid: 217
+[2025-06-29 04:15:05 +0000] [152] [CRITICAL] WORKER TIMEOUT (pid:153)
+[2025-06-29 04:15:05 +0000] [153] [ERROR] Error handling request (no URI read)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/sync.py", line 133, in handle
+    req = next(parser)
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/http/parser.py", line 41, in __next__
+    self.mesg = self.mesg_class(self.cfg, self.unreader, self.source_addr, self.req_count)
+                ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/http/message.py", line 259, in __init__
+    super().__init__(cfg, unreader, peer_addr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/http/message.py", line 60, in __init__
+    unused = self.parse(self.unreader)
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/http/message.py", line 271, in parse
+    self.get_data(unreader, buf, stop=True)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/http/message.py", line 262, in get_data
+    data = unreader.read()
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/http/unreader.py", line 36, in read
+    d = self.chunk()
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/http/unreader.py", line 63, in chunk
+    return self.sock.recv(self.mxchunk)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/site-packages/gunicorn/workers/base.py", line 204, in handle_abort
+    sys.exit(1)
+    ~~~~~~~~^^^
+SystemExit: 1
+[2025-06-29 04:15:05 +0000] [153] [INFO] Worker exiting (pid: 153)
+[2025-06-29 04:15:05 +0000] [249] [INFO] Booting worker with pid: 249
+[2025-07-03 22:36:45 +0000] [152] [INFO] Starting gunicorn 23.0.0
+[2025-07-03 22:36:45 +0000] [152] [INFO] Listening at: http://0.0.0.0:8080 (152)
+[2025-07-03 22:36:45 +0000] [152] [INFO] Using worker: sync
+[2025-07-03 22:36:45 +0000] [153] [INFO] Booting worker with pid: 153
+[2025-07-03 22:36:45 +0000] [154] [INFO] Booting worker with pid: 154
+[2025-07-06 22:12:24 +0000] [152] [INFO] Starting gunicorn 23.0.0
+[2025-07-06 22:12:24 +0000] [152] [INFO] Listening at: http://0.0.0.0:8080 (152)
+[2025-07-06 22:12:24 +0000] [152] [INFO] Using worker: sync
+[2025-07-06 22:12:24 +0000] [153] [INFO] Booting worker with pid: 153
+[2025-07-06 22:12:24 +0000] [154] [INFO] Booting worker with pid: 154
+[2025-07-06 22:38:34 +0000] [152] [CRITICAL] WORKER TIMEOUT (pid:153)
+[2025-07-06 22:38:38 +0000] [153] [INFO] Worker exiting (pid: 153)
+[2025-07-06 22:38:38 +0000] [152] [ERROR] Worker (pid:153) exited with code 1
+[2025-07-06 22:38:38 +0000] [152] [ERROR] Worker (pid:153) exited with code 1.
+[2025-07-06 22:38:38 +0000] [217] [INFO] Booting worker with pid: 217
+[2025-07-06 22:39:08 +0000] [152] [CRITICAL] WORKER TIMEOUT (pid:154)
+[2025-07-06 22:39:13 +0000] [154] [INFO] Worker exiting (pid: 154)
+[2025-07-06 22:39:13 +0000] [152] [ERROR] Worker (pid:154) exited with code 1
+[2025-07-06 22:39:13 +0000] [152] [ERROR] Worker (pid:154) exited with code 1.
+[2025-07-06 22:39:13 +0000] [249] [INFO] Booting worker with pid: 249
+[2025-08-22 11:56:08 +0000] [89] [INFO] Starting gunicorn 23.0.0
+[2025-08-22 11:56:08 +0000] [89] [INFO] Listening at: http://0.0.0.0:8080 (89)
+[2025-08-22 11:56:08 +0000] [89] [INFO] Using worker: sync
+[2025-08-22 11:56:08 +0000] [90] [INFO] Booting worker with pid: 90
+[2025-08-22 11:56:08 +0000] [91] [INFO] Booting worker with pid: 91
+[2025-08-22 12:29:29,838] ERROR in app: Exception on /calculate_cuts [POST]
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.13/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/usr/local/lib/python3.13/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/usr/local/lib/python3.13/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/usr/local/lib/python3.13/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/config/Planker-ny/app.py", line 52, in calculate_cuts
+    total_used += stock['original_length'] - stock['remaining_length']
+                  ~~~~~^^^^^^^^^^^^^^^^^^^
+TypeError: string indices must be integers, not 'str'
+[2025-08-22 12:38:36 +0000] [89] [INFO] Starting gunicorn 23.0.0
+[2025-08-22 12:38:36 +0000] [89] [INFO] Listening at: http://0.0.0.0:8080 (89)
+[2025-08-22 12:38:36 +0000] [89] [INFO] Using worker: sync
+[2025-08-22 12:38:36 +0000] [90] [INFO] Booting worker with pid: 90
+[2025-08-22 12:38:36 +0000] [91] [INFO] Booting worker with pid: 91
+[2025-08-22 12:56:05 +0000] [91] [INFO] Worker reloading: /config/Planker-ny/app.py modified
+[2025-08-22 12:56:05 +0000] [91] [INFO] Worker exiting (pid: 91)
+[2025-08-22 12:56:05 +0000] [90] [INFO] Worker reloading: /config/Planker-ny/app.py modified
+[2025-08-22 12:56:05 +0000] [90] [INFO] Worker exiting (pid: 90)
+[2025-08-22 12:56:05 +0000] [156] [INFO] Booting worker with pid: 156
+[2025-08-22 12:56:05 +0000] [157] [INFO] Booting worker with pid: 157
+[2025-10-08 10:57:13 +0000] [89] [INFO] Starting gunicorn 23.0.0
+[2025-10-08 10:57:13 +0000] [89] [INFO] Listening at: http://0.0.0.0:8080 (89)
+[2025-10-08 10:57:13 +0000] [89] [INFO] Using worker: sync
+[2025-10-08 10:57:13 +0000] [90] [INFO] Booting worker with pid: 90
+[2025-10-08 10:57:13 +0000] [91] [INFO] Booting worker with pid: 91
+[2025-11-20 19:20:26 +0000] [90] [INFO] Starting gunicorn 23.0.0
+[2025-11-20 19:20:26 +0000] [90] [INFO] Listening at: http://0.0.0.0:8080 (90)
+[2025-11-20 19:20:26 +0000] [90] [INFO] Using worker: sync
+[2025-11-20 19:20:26 +0000] [91] [INFO] Booting worker with pid: 91
+[2025-11-20 19:20:26 +0000] [92] [INFO] Booting worker with pid: 92
+[2026-01-30 00:57:57 +0000] [90] [CRITICAL] WORKER TIMEOUT (pid:91)
+[2026-01-30 00:58:21 +0000] [91] [INFO] Worker exiting (pid: 91)
+[2026-01-30 00:58:21 +0000] [90] [ERROR] Worker (pid:91) exited with code 1
+[2026-01-30 00:58:21 +0000] [90] [ERROR] Worker (pid:91) exited with code 1.
+[2026-01-30 00:58:21 +0000] [157] [INFO] Booting worker with pid: 157
+[2026-02-02 00:58:14 +0000] [90] [CRITICAL] WORKER TIMEOUT (pid:92)
+[2026-02-02 00:58:51 +0000] [92] [INFO] Worker exiting (pid: 92)
+[2026-02-02 00:58:52 +0000] [90] [ERROR] Worker (pid:92) exited with code 1
+[2026-02-02 00:58:52 +0000] [90] [ERROR] Worker (pid:92) exited with code 1.
+[2026-02-02 00:58:52 +0000] [190] [INFO] Booting worker with pid: 190
+[2026-02-02 01:00:22 +0000] [90] [CRITICAL] WORKER TIMEOUT (pid:157)
+[2026-02-02 01:01:16 +0000] [90] [CRITICAL] WORKER TIMEOUT (pid:190)
+[2026-02-02 01:01:16 +0000] [190] [INFO] Worker exiting (pid: 190)
+[2026-02-02 01:01:16 +0000] [157] [INFO] Worker exiting (pid: 157)
+[2026-02-02 01:01:16 +0000] [90] [ERROR] Worker (pid:190) exited with code 1
+[2026-02-02 01:01:16 +0000] [90] [ERROR] Worker (pid:190) exited with code 1.
+[2026-02-02 01:01:16 +0000] [223] [INFO] Booting worker with pid: 223
+[2026-02-02 01:01:16 +0000] [90] [ERROR] Worker (pid:157) was sent SIGKILL! Perhaps out of memory?
+[2026-02-02 01:01:16 +0000] [224] [INFO] Booting worker with pid: 224
+[2026-02-04 10:20:49 +0000] [90] [CRITICAL] WORKER TIMEOUT (pid:223)
+[2026-02-04 10:20:50 +0000] [90] [CRITICAL] WORKER TIMEOUT (pid:224)
+[2026-02-04 10:21:24 +0000] [90] [ERROR] Worker (pid:223) was sent SIGKILL! Perhaps out of memory?
+[2026-02-04 10:21:24 +0000] [289] [INFO] Booting worker with pid: 289
+[2026-02-04 10:21:24 +0000] [90] [ERROR] Worker (pid:224) was sent SIGKILL! Perhaps out of memory?
+[2026-02-04 10:21:24 +0000] [290] [INFO] Booting worker with pid: 290
+[2026-02-05 00:57:56 +0000] [90] [CRITICAL] WORKER TIMEOUT (pid:290)
+[2026-02-05 00:59:09 +0000] [290] [INFO] Worker exiting (pid: 290)
+[2026-02-05 00:59:09 +0000] [90] [ERROR] Worker (pid:290) exited with code 1
+[2026-02-05 00:59:09 +0000] [90] [ERROR] Worker (pid:290) exited with code 1.
+[2026-02-05 00:59:09 +0000] [355] [INFO] Booting worker with pid: 355
+[2026-02-05 01:00:39 +0000] [90] [CRITICAL] WORKER TIMEOUT (pid:289)
+[2026-02-05 01:01:48 +0000] [289] [INFO] Worker exiting (pid: 289)
+[2026-02-05 01:01:48 +0000] [90] [ERROR] Worker (pid:289) exited with code 1
+[2026-02-05 01:01:48 +0000] [90] [ERROR] Worker (pid:289) exited with code 1.
+[2026-02-05 01:01:48 +0000] [388] [INFO] Booting worker with pid: 388
+[2026-02-05 01:03:19 +0000] [90] [CRITICAL] WORKER TIMEOUT (pid:355)
+[2026-02-05 01:05:17 +0000] [355] [INFO] Worker exiting (pid: 355)
+[2026-02-05 01:05:17 +0000] [90] [ERROR] Worker (pid:355) exited with code 1
+[2026-02-05 01:05:17 +0000] [90] [ERROR] Worker (pid:355) exited with code 1.
+[2026-02-05 01:05:17 +0000] [421] [INFO] Booting worker with pid: 421
+[2026-02-05 01:07:02 +0000] [90] [CRITICAL] WORKER TIMEOUT (pid:388)
+[2026-02-05 01:08:49 +0000] [388] [INFO] Worker exiting (pid: 388)
+[2026-02-05 01:08:49 +0000] [90] [ERROR] Worker (pid:388) exited with code 1
+[2026-02-05 01:08:49 +0000] [90] [ERROR] Worker (pid:388) exited with code 1.
+[2026-02-05 01:08:49 +0000] [454] [INFO] Booting worker with pid: 454
+[2026-03-10 14:40:30 +0000] [421] [WARNING] Invalid request from ip=172.16.5.75: limit request headers fields size
+[2026-03-10 14:40:30 +0000] [454] [WARNING] Invalid request from ip=172.16.5.75: limit request headers fields size
+[2026-03-10 14:40:31 +0000] [421] [WARNING] Invalid request from ip=172.16.5.75: limit request headers fields size
+[2026-03-10 14:40:31 +0000] [421] [WARNING] Invalid request from ip=172.16.5.75: limit request headers fields size
+[2026-03-10 14:40:31 +0000] [421] [WARNING] Invalid request from ip=172.16.5.75: limit request headers fields size
