@@ -33,7 +33,7 @@ def save_barcode_log(log):
         json.dump(log, f, ensure_ascii=False, indent=2)
 
 def validate_ean13(barcode):
-    # FIXED: was checking len == 26, correct is 13
+    """Validate EAN-13 checksum."""
     if len(barcode) != 13 or not barcode.isdigit():
         return False
     total = 0
@@ -42,29 +42,300 @@ def validate_ean13(barcode):
     check_digit = (10 - (total % 10)) % 10
     return int(barcode[12]) == check_digit
 
-def parse_barcode_norwegian(barcode):
-    barcode = barcode.strip()
 
-    # FIXED: correct EAN-13 is 13 digits, not 26
-    if len(barcode) == 13 and barcode.isdigit():
-        if validate_ean13(barcode):
-            length_encoded = barcode[7:12]
-            try:
-                length_mm = int(length_encoded)
-                length_cm = length_mm / 10.0
-                if 50 < length_cm < 800:
+# GS1-128 Application Identifier (AI) definitions
+# Key: AI code, Value: (name, field_length, decimal_positions)
+# decimal_positions: how many digits from the right are decimals (0 = integer)
+GS1_AI_DEFINITIONS = {
+    '00': ('SSCC',                   18, 0),
+    '01': ('GTIN',                   14, 0),
+    '10': ('batch_lot',              -1, 0),  # variable length, up to 20
+    '11': ('prod_date',               6, 0),
+    '13': ('pack_date',               6, 0),
+    '15': ('best_before',             6, 0),
+    '17': ('expiry_date',             6, 0),
+    '20': ('variant',                 2, 0),
+    '21': ('serial',                 -1, 0),  # variable, up to 20
+    '30': ('quantity',               -1, 0),  # variable, up to 8
+    # Length/dimension AIs (31xx–36xx): last digit = decimal places
+    '310': ('net_weight_kg',          6, None),  # AI 3100–3109
+    '311': ('length_m',               6, None),  # AI 3110–3119  <-- most common for lumber
+    '312': ('width_m',                6, None),
+    '313': ('height_m',               6, None),
+    '314': ('area_m2',                6, None),
+    '315': ('volume_l',               6, None),
+    '316': ('volume_m3',              6, None),
+    '321': ('length_in',              6, None),
+    '331': ('length_m_log',           6, None),
+    '332': ('width_m_log',            6, None),
+    '333': ('height_m_log',           6, None),
+    '334': ('area_m2_log',            6, None),
+    '335': ('volume_l_log',           6, None),
+    '336': ('volume_m3_log',          6, None),
+}
+
+# Length-related AIs – used to extract plank length
+LENGTH_AI_PREFIXES = {'311', '312', '313', '321', '331', '332', '333'}
+
+
+def parse_gs1_128(raw):
+    """
+    Parse a GS1-128 barcode string.
+
+    Accepts two input formats:
+      1. Human-readable with parentheses:
+         "(01) 07071890000039 (10) 123456 (3102) 004500"
+      2. Raw concatenated digits (no parentheses):
+         "0107071890000039101234563102004500"
+
+    Returns a dict with all parsed AIs, or raises ValueError on failure.
+    """
+    raw = raw.strip()
+    result = {}
+
+    # ── Format 1: parenthesised ──────────────────────────────────────────────
+    import re
+    paren_pattern = re.compile(r'\((\d{2,4})\)\s*([\w\-]+)')
+    matches = paren_pattern.findall(raw)
+
+    if matches:
+        for ai_code, value in matches:
+            result[ai_code] = value.strip()
+        return result
+
+    # ── Format 2: raw digit string ───────────────────────────────────────────
+    # Walk through the string consuming AIs and their values
+    pos = 0
+    raw_digits = re.sub(r'\s+', '', raw)  # strip all whitespace
+
+    while pos < len(raw_digits):
+        matched = False
+
+        # Try 4-digit AI first (e.g. 3102), then 3-digit (e.g. 310), then 2-digit
+        for ai_len in (4, 3, 2):
+            if pos + ai_len > len(raw_digits):
+                continue
+            ai_code = raw_digits[pos:pos + ai_len]
+
+            # 4-digit AIs like 3102: prefix is first 3 digits, last digit = decimals
+            ai_def = None
+            decimal_places = 0
+
+            if ai_len == 4 and ai_code[:3] in GS1_AI_DEFINITIONS:
+                prefix = ai_code[:3]
+                decimal_places = int(ai_code[3])
+                ai_def = GS1_AI_DEFINITIONS[prefix]
+            elif ai_code in GS1_AI_DEFINITIONS:
+                ai_def = GS1_AI_DEFINITIONS[ai_code]
+                decimal_places = ai_def[2] if ai_def[2] is not None else 0
+
+            if ai_def is None:
+                continue
+
+            name, field_len, _ = ai_def
+            pos += ai_len
+
+            if field_len == -1:
+                # Variable-length: read until FNC1 (here: end of string or next known AI)
+                end = pos
+                while end < len(raw_digits):
+                    # Peek ahead: is the next 2-4 chars a known AI?
+                    peek2 = raw_digits[end:end+2]
+                    peek3 = raw_digits[end:end+3]
+                    peek4 = raw_digits[end:end+4]
+                    if (peek4[:3] in GS1_AI_DEFINITIONS or
+                            peek3 in GS1_AI_DEFINITIONS or
+                            peek2 in GS1_AI_DEFINITIONS):
+                        break
+                    end += 1
+                value = raw_digits[pos:end]
+                pos = end
+            else:
+                value = raw_digits[pos:pos + field_len]
+                pos += field_len
+
+            result[ai_code] = (value, decimal_places)
+            matched = True
+            break
+
+        if not matched:
+            # Unknown AI or malformed – skip one character and continue
+            pos += 1
+
+    return result
+
+
+def extract_length_from_gs1(parsed_ais):
+    """
+    Extract plank length in cm from a parsed GS1-128 AI dict.
+
+    GS1-128 AI 31xx codes for Norwegian lumber:
+      310x = netto vekt/lengde, siste siffer = antall desimaler
+             Eks: 3102 + 004500 → 004500 / 10^2 = 45.00 → 4500 cm? Nei:
+             Verdien er i meter: 45.00 m er for langt, men 4.500 m = 450 cm ✓
+             Norsk standard: AI 3102 brukes for lengde i METER med 2 desimaler
+             004500 → int = 4500 → 4500 / 10^2 = 45.00 m  (for langt)
+             Men vanlig norsk bruk: verdi er i cm med ledende nuller:
+             004500 → strip ledende null → 4500 → 4500 cm = 45 m (for langt)
+             Korrekt tolkning: 004500 = 0045.00 → dvs. 6 siffer, 2 desimaler → 45.00
+             Men 45.00 m er urimelig. Norsk trelast: 004500 = 4500 mm = 450 cm ✓
+             Altså: raw int / 10 = cm   (004500 → 4500 / 10 = 450 cm)
+
+      311x = lengde i meter, siste siffer = antall desimaler
+             Eks: 3112 + 004500 → 4500 / 10^2 = 45.00 m (urimelig)
+                  3112 + 000450 → 450 / 10^2 = 4.50 m = 450 cm ✓
+
+    Strategi:
+      1. Prøv 311x (lengde i meter) – direkte meter-tolkning
+      2. Prøv 310x (vekt/lengde) – tolker verdien som mm (÷10 → cm)
+      3. Alle andre dimensjons-AIs (312x, 313x osv.) – meter-tolkning
+
+    Returns length_cm (float) or None.
+    """
+    length_cm = None
+    candidates = []
+
+    for ai_code, val in parsed_ais.items():
+        raw_value = val if isinstance(val, str) else val[0]
+
+        if len(ai_code) != 4:
+            continue
+
+        prefix3 = ai_code[:3]
+        try:
+            decimal_places = int(ai_code[3])
+        except ValueError:
+            continue
+
+        if prefix3 not in ('310', '311', '312', '313', '321', '331', '332', '333'):
+            continue
+
+        try:
+            numeric = int(raw_value)
+        except (ValueError, TypeError):
+            continue
+
+        if prefix3 == '310':
+            # Norsk trelast: AI 310x brukes for lengde i mm
+            # 004500 med AI 3102 → 4500 mm / 10 = 450 cm
+            # Ignorer decimal_places fra AI-koden, tolker som mm direkte
+            candidate_cm = numeric / 10.0
+            candidates.append((ai_code, candidate_cm, 'mm_as_cm'))
+
+            # Alternativt: tolker som meter med desimaler (standard GS1)
+            candidate_m = numeric / (10 ** decimal_places)
+            if 0.3 <= candidate_m <= 20:
+                candidates.append((ai_code, round(candidate_m * 100, 1), 'metre'))
+
+        else:
+            # 311x og andre: standard meter-tolkning
+            candidate_m = numeric / (10 ** decimal_places)
+            if 0.3 <= candidate_m <= 20:
+                candidates.append((ai_code, round(candidate_m * 100, 1), 'metre'))
+
+    # Pick the best candidate: plausible plank length 30–2000 cm
+    # Prefer 311x over 310x, prefer metre interpretation
+    for ai_code, cand_cm, method in sorted(
+        candidates,
+        key=lambda x: (0 if x[0].startswith('311') else 1,
+                       0 if x[2] == 'metre' else 1)
+    ):
+        if 30 <= cand_cm <= 2000:
+            length_cm = cand_cm
+            break
+
+    return round(length_cm, 1) if length_cm is not None else None
+
+
+def parse_barcode_norwegian(barcode):
+    """
+    Parse a barcode from a Norwegian lumber plank.
+
+    Supports:
+      1. GS1-128 with parentheses  (01) 07071890000039 (3102) 004500
+      2. GS1-128 raw digits        0107071890000039…3102004500
+      3. Plain EAN-13              4006381333931
+      4. Numeric cm value          450
+      5. L-prefixed mm value       L4500
+    """
+    import re
+    barcode = barcode.strip()
+    timestamp = datetime.now().isoformat()
+
+    # ── 1. GS1-128 (parenthesised or raw with known AIs) ────────────────────
+    is_gs1 = '(' in barcode or (len(barcode) >= 18 and barcode.isdigit())
+    if is_gs1:
+        try:
+            parsed_ais = parse_gs1_128(barcode)
+            if parsed_ais:
+                length_cm = extract_length_from_gs1(parsed_ais)
+                gtin = parsed_ais.get('01', '')
+                if isinstance(gtin, tuple):
+                    gtin = gtin[0]
+                batch = parsed_ais.get('10', '')
+                if isinstance(batch, tuple):
+                    batch = batch[0]
+
+                if length_cm and 10 < length_cm < 2000:
                     return {
                         'valid': True,
                         'barcode': barcode,
-                        'format': 'EAN-13',
-                        'length_cm': round(length_cm, 1),
-                        'producer': barcode[0:7],
-                        'product_code': barcode[0:7],
-                        'timestamp': datetime.now().isoformat()
+                        'format': 'GS1-128',
+                        'length_cm': length_cm,
+                        'producer': gtin[:7] if gtin else 'ukjent',
+                        'product_code': gtin,
+                        'batch': batch,
+                        'parsed_ais': {
+                            k: (v[0] if isinstance(v, tuple) else v)
+                            for k, v in parsed_ais.items()
+                        },
+                        'timestamp': timestamp
                     }
-            except ValueError:
-                pass
+                elif parsed_ais:
+                    # GS1 parsed OK but no length found
+                    return {
+                        'valid': False,
+                        'barcode': barcode,
+                        'format': 'GS1-128',
+                        'error': 'GS1-128 gjenkjent, men ingen lengde-AI funnet (trenger AI 311x eller 310x)',
+                        'parsed_ais': {
+                            k: (v[0] if isinstance(v, tuple) else v)
+                            for k, v in parsed_ais.items()
+                        }
+                    }
+        except Exception as e:
+            pass  # Fall through to other formats
 
+    # ── 2. EAN-13 ────────────────────────────────────────────────────────────
+    if len(barcode) == 13 and barcode.isdigit():
+        if validate_ean13(barcode):
+            # Try multiple strategies for Norwegian EAN-13 length encoding
+            candidates_ean = []
+            for start, divisor in [(7, 10.0), (8, 10.0), (8, 1.0)]:
+                try:
+                    val = int(barcode[start:13]) / divisor
+                    if 30 < val < 2000:
+                        candidates_ean.append(round(val, 1))
+                except ValueError:
+                    pass
+            if candidates_ean:
+                return {
+                    'valid': True,
+                    'barcode': barcode,
+                    'format': 'EAN-13',
+                    'length_cm': candidates_ean[0],
+                    'producer': barcode[0:7],
+                    'product_code': barcode[0:7],
+                    'timestamp': timestamp
+                }
+            return {
+                'valid': False,
+                'barcode': barcode,
+                'format': 'EAN-13',
+                'error': 'EAN-13 gyldig men ingen plausibel lengde funnet'
+            }
+
+    # ── 3. Numerisk cm-verdi ─────────────────────────────────────────────────
     try:
         length = float(barcode)
         if 50 < length < 800:
@@ -75,11 +346,12 @@ def parse_barcode_norwegian(barcode):
                 'length_cm': round(length, 1),
                 'producer': 'manuell',
                 'product_code': 'ukjent',
-                'timestamp': datetime.now().isoformat()
+                'timestamp': timestamp
             }
     except ValueError:
         pass
 
+    # ── 4. L-prefixed mm value (e.g. L4500 = 450.0 cm) ──────────────────────
     if barcode.upper().startswith('L'):
         try:
             value = int(barcode[1:])
@@ -92,12 +364,16 @@ def parse_barcode_norwegian(barcode):
                     'length_cm': round(length, 1),
                     'producer': 'kodet',
                     'product_code': 'trelast',
-                    'timestamp': datetime.now().isoformat()
+                    'timestamp': timestamp
                 }
         except ValueError:
             pass
 
-    return {'valid': False, 'barcode': barcode, 'error': 'Ukjent strekkodeformat'}
+    return {
+        'valid': False,
+        'barcode': barcode,
+        'error': 'Ukjent strekkodeformat. Støttede formater: GS1-128, EAN-13, numerisk cm, L-prefiks (mm)'
+    }
 
 
 def solve_cutting_stock_ffd(wanted_lengths, measured_lengths, blade_width):
