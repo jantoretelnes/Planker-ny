@@ -279,9 +279,10 @@ def parse_barcode_norwegian(barcode):
     barcode = barcode.strip()
     timestamp = datetime.now().isoformat()
 
-    # Strip AIM Symbology Identifiers (e.g. "]C1" for GS1 Code 128, "]e0" for GS1 DataBar)
-    # These are sometimes prepended by hardware/browser barcode scanners.
-    aim_match = re.match(r'^\](?:C1|e0|d2|Q3|J1)', barcode)
+    # Strip AIM Symbology Identifiers prepended by hardware/browser barcode scanners.
+    # With leading "]": e.g. "]C1", "]e0"
+    # Without leading "]": e.g. "C1" (some scanners omit the bracket)
+    aim_match = re.match(r'^\]?(?:C1|e0|d2|Q3|J1)', barcode)
     if aim_match:
         barcode = barcode[aim_match.end():].strip()
 
