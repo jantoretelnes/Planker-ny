@@ -523,9 +523,10 @@ document.addEventListener('DOMContentLoaded', function () {
     quantityInput.placeholder = 'Antall'; quantityInput.style.width = '8ch';
 
     // NOBB-lenke med GTIN fra strekkoden
-    // Use 14 digits if starts with 0, otherwise 13 digits
-    const rawGtin = parsed.product_code || parsed.producer || '';
-    const gtin = rawGtin.startsWith('0') ? rawGtin.padStart(14, '0').slice(0, 14) : rawGtin.slice(0, 13);
+    // product_code = full AI 01 value (14 digits), producer = first 7 digits only
+    // Always use product_code (full GTIN), never fall back to producer
+    const rawGtin = parsed.product_code || '';
+    const gtin = rawGtin.startsWith('0') ? rawGtin.slice(0, 14) : rawGtin.slice(0, 13);
     const nobbBtn = document.createElement('a');
     nobbBtn.href = `https://nobb.no/items/search?gtins=${gtin}&newSearch=True`;
     nobbBtn.target = '_blank';
