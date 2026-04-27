@@ -436,3 +436,73 @@ button:active { transform: scale(0.97); }
   margin-left: 8px;
   vertical-align: middle;
 }
+
+/* ── Cut summary box (shown once before boards) ── */
+.cut-summary-box {
+  background: var(--blue-light);
+  border: 1.5px solid var(--blue-mid);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  margin-bottom: 16px;
+}
+.cut-summary-box h3 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+  color: var(--blue);
+}
+.cut-summary-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.cut-summary-list li {
+  background: var(--white);
+  border: 1px solid var(--blue-mid);
+  border-radius: 5px;
+  padding: 4px 10px;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.88rem;
+  color: var(--blue);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Cut legend ── */
+.cut-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cut-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--white);
+  border: 1px solid var(--blue-mid);
+  border-radius: 5px;
+  padding: 5px 10px;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.88rem;
+  color: #1a2332;
+}
+.cut-legend-swatch {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.cut-legend-label { font-weight: 500; }
+
+/* ── Cut list with color dot ── */
+.cut-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}

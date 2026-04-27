@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', function () {
   let lastScanned = null;
   let lastCutData = null;   // Store last results for PDF export
   let debounceTimer = null;
+  let lastResultsHash = null; // Track last visualized results to avoid redundant re-renders
 
   addWantedLengthButton.addEventListener('click', () => addInputGroup('wanted'));
   addMeasuredLengthButton.addEventListener('click', () => addInputGroup('measured'));
@@ -385,13 +386,18 @@ document.addEventListener('DOMContentLoaded', function () {
         if (resultsHeader) resultsHeader.style.display = 'none';
         if (suggestionsSection) suggestionsSection.style.display = 'block';
         lastCutData = null;
+        lastResultsHash = null;
         return Promise.reject(null);
       }
       lastCutData = { ...cutData, blade_width: data.blade_width, unit_price: data.unit_price };
+      const newHash = JSON.stringify(cutData.results) + data.blade_width;
       displayResults(cutData, data.unit_price);
       if (resultsHeader) resultsHeader.style.display = 'flex';
       // Hide suggestions when a valid cutting plan exists
       if (suggestionsSection) suggestionsSection.style.display = 'none';
+      // Skip re-visualization if results haven't changed
+      if (newHash === lastResultsHash) return Promise.reject(null);
+      lastResultsHash = newHash;
       return fetch('/visualize_cuts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -422,18 +428,71 @@ document.addEventListener('DOMContentLoaded', function () {
     // Summary box
     html += `<div class="summary-box">
       <div class="summary-item"><span>📏 Ønsket</span><strong>${data.total_wanted.toFixed(1)} cm</strong></div>
-      <div class="summary-item"><span>📦 Målt</span><strong>${data.total_measured.toFixed(1)} cm</strong></div>
-      <div class="summary-item"><span>✂️ Brukt</span><strong>${data.total_used.toFixed(1)} cm</strong></div>
-      <div class="summary-item"><span>🗑️ Svinn</span><strong>${data.total_waste.toFixed(1)} cm</strong></div>
+      <div class="summary-item"><span>📦 Målt totalt</span><strong>${data.total_measured.toFixed(1)} cm</strong></div>
+      <div class="summary-item"><span>✂️ Til kutt</span><strong>${data.total_wanted.toFixed(1)} cm</strong></div>
+      <div class="summary-item"><span>🔪 Sagblad-svinn</span><strong>${(data.total_kerf_waste ?? 0).toFixed(2)} cm</strong></div>
+      <div class="summary-item"><span>📐 Avkapp</span><strong>${(data.total_offcut ?? 0).toFixed(1)} cm</strong></div>
+      <div class="summary-item"><span>🗑️ Svinn totalt</span><strong>${data.total_waste.toFixed(1)} cm</strong></div>
       <div class="summary-item"><span>💰 Totalpris</span><strong>kr ${data.total_price.toFixed(2)}</strong></div>
       <div class="summary-item"><span>💸 Svinn-kostnad</span><strong>kr ${data.waste_price.toFixed(2)}</strong></div>
     </div>`;
 
+    // Same colors as render_cut_image in backend
+    const CUT_COLORS = ['#2196F3', '#1565C0', '#42A5F5', '#0D47A1', '#64B5F6'];
+
+    // Build unique cut lengths in the order they first appear across all boards
+    const uniqueLengths = [];
+    data.results.forEach(stock => {
+      if (!stock.unused) {
+        stock.cuts.forEach(cut => {
+          if (!uniqueLengths.includes(cut)) uniqueLengths.push(cut);
+        });
+      }
+    });
+
+    // Legend: one color per unique cut length, sorted longest first
+    const sortedLengths = [...uniqueLengths].sort((a, b) => b - a);
+    const colorMap = {};
+    sortedLengths.forEach((len, i) => { colorMap[len] = CUT_COLORS[i % CUT_COLORS.length]; });
+
+    // Count occurrences per length
+    const cutCounts = {};
+    data.results.forEach(stock => {
+      if (!stock.unused) stock.cuts.forEach(cut => { cutCounts[cut] = (cutCounts[cut] || 0) + 1; });
+    });
+
+    // Render legend box
+    let legendHtml = '<div class="cut-legend">';
+    sortedLengths.forEach(len => {
+      const color = colorMap[len];
+      const qty = cutCounts[len] || 1;
+      legendHtml += `<div class="cut-legend-item">
+        <span class="cut-legend-swatch" style="background:${color}"></span>
+        <span class="cut-legend-label">${qty}× ${parseFloat(len).toFixed(1)} cm</span>
+      </div>`;
+    });
+    legendHtml += `<div class="cut-legend-item">
+        <span class="cut-legend-swatch" style="background:#424242"></span>
+        <span class="cut-legend-label">Sagblad</span>
+      </div>`;
+    legendHtml += `<div class="cut-legend-item">
+        <span class="cut-legend-swatch" style="background:#EF5350"></span>
+        <span class="cut-legend-label">Avkapp</span>
+      </div>`;
+    legendHtml += '</div>';
+
+    html += `<div class="cut-summary-box">
+      <h3>✂️ Forklaring</h3>
+      ${legendHtml}
+    </div>`;
+
+    // Per-board: full kuttplan (original) + stats
     data.results.forEach((stock, index) => {
       const isUnused = stock.unused === true;
       let cutsHtml = '';
       stock.cuts.forEach((cut, ci) => {
-        cutsHtml += `<li><span class="cut-num">#${ci + 1}</span> ${cut.toFixed(1)} cm</li>`;
+        const color = colorMap[cut] || CUT_COLORS[0];
+        cutsHtml += `<li><span class="cut-dot" style="background:${color}"></span><span class="cut-num">#${ci + 1}</span> ${cut.toFixed(1)} cm</li>`;
       });
 
       const unusedBadge = isUnused ? '<span class="unused-badge">Ikke i bruk</span>' : '';
@@ -441,7 +500,8 @@ document.addEventListener('DOMContentLoaded', function () {
         ? `<div class="stock-stats"><span>📏 Hele planken er ubrukt</span></div>`
         : `<div class="stock-stats">
             <span>✂️ Kutt: ${stock.cuts.length}</span>
-            <span>🗑️ Avkapp: ${stock.remaining_length.toFixed(1)} cm</span>
+            <span>🔪 Sagblad-svinn: ${(stock.kerf_waste ?? 0).toFixed(2)} cm</span>
+            <span>📐 Avkapp: ${(stock.offcut ?? stock.remaining_length).toFixed(1)} cm</span>
            </div>
            <ul>${cutsHtml}</ul>`;
 
