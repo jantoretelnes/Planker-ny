@@ -392,3 +392,47 @@ button:active { transform: scale(0.97); }
   .summary-box { grid-template-columns: 1fr 1fr; }
   button { padding: 8px 12px; font-size: 0.82rem; }
 }
+
+/* ── Suggestions status & covered ── */
+.suggestions-status {
+  grid-column: 1 / -1;
+  background: var(--blue-light);
+  border: 1.5px solid var(--blue-mid);
+  border-radius: 7px;
+  padding: 10px 14px;
+  font-size: 0.88rem;
+  color: var(--grey);
+  margin-bottom: 4px;
+}
+.suggestions-status strong { color: var(--blue); }
+
+.suggestions-covered {
+  grid-column: 1 / -1;
+  background: var(--green-light);
+  border: 1.5px solid #A5D6A7;
+  border-radius: 8px;
+  padding: 14px 18px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--green);
+  text-align: center;
+}
+
+/* ── Unused boards ── */
+.stock-unused {
+  border-color: #B0BEC5;
+  background: #FAFAFA;
+  opacity: 0.85;
+}
+.stock-unused h3 { color: #607D8B; }
+.unused-badge {
+  display: inline-block;
+  background: #90A4AE;
+  color: white;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: 8px;
+  vertical-align: middle;
+}

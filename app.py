@@ -11,7 +11,7 @@ import os
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.units import cm
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image as RLImage, HRFlowable
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image as RLImage, HRFlowable, KeepTogether
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 
@@ -102,6 +102,24 @@ def parse_gs1_128(raw):
         for ai_code, value in matches:
             result[ai_code] = value.strip()
         return result
+
+    # ── Format 1b: space-separated without parentheses ─────────────────────
+    # e.g. "01 07071890000039 10 123456 3102 004500"
+    # Convert to parenthesised format and re-parse
+    space_pattern = re.compile(r'^(\d{2,4})\s+([\w\-]+)(?:\s+(\d{2,4})\s+([\w\-]+))*$')
+    if not matches and re.match(r'^\d{2,4}\s+', raw.strip()):
+        tokens = raw.strip().split()
+        i = 0
+        while i + 1 < len(tokens):
+            ai_candidate = tokens[i]
+            val_candidate = tokens[i + 1]
+            if re.match(r'^\d{2,4}$', ai_candidate):
+                result[ai_candidate] = val_candidate.strip()
+                i += 2
+            else:
+                break
+        if result:
+            return result
 
     # ── Format 2: raw digit string ───────────────────────────────────────────
     # Walk through the string consuming AIs and their values
@@ -263,7 +281,7 @@ def parse_barcode_norwegian(barcode):
     timestamp = datetime.now().isoformat()
 
     # ── 1. GS1-128 (parenthesised or raw with known AIs) ────────────────────
-    is_gs1 = '(' in barcode or (len(barcode) >= 18 and barcode.isdigit())
+    is_gs1 = '(' in barcode or (len(barcode) >= 18 and barcode.isdigit()) or bool(__import__('re').match(r'^\d{2,4}\s+', barcode))
     if is_gs1:
         try:
             parsed_ais = parse_gs1_128(barcode)
@@ -408,18 +426,101 @@ def solve_cutting_stock_ffd(wanted_lengths, measured_lengths, blade_width):
     return bins
 
 
-def suggest_optimal_lengths(wanted_lengths, blade_width):
+def _greedy_cover(sorted_wanted, measured_lengths, blade_width):
+    """
+    Fit as many wanted cuts as possible into the measured boards (greedy FFD).
+    Returns a list of cut lengths that were successfully placed.
+    Unlike solve_cutting_stock_ffd, this does NOT error if some cuts don't fit –
+    it simply stops when boards run out and returns what was placed.
+    """
+    stock_pool = list(measured_lengths)  # already sorted descending by caller
+    bins = []
+    covered = []
+
+    for length in sorted_wanted:
+        placed = False
+        # Try existing bins first
+        for stock in bins:
+            kerf = blade_width if stock['cuts'] else 0
+            if stock['remaining'] >= length + kerf:
+                stock['remaining'] -= (length + kerf)
+                stock['cuts'].append(length)
+                covered.append(length)
+                placed = True
+                break
+        if not placed:
+            # Try to open a new board from the pool
+            suitable = next((i for i, b in enumerate(stock_pool) if b >= length), None)
+            if suitable is not None:
+                board_len = stock_pool.pop(suitable)
+                bins.append({'cuts': [length], 'remaining': board_len - length})
+                covered.append(length)
+            # If no board fits, skip this cut (it remains in remaining_wanted)
+
+    return covered
+
+
+def suggest_optimal_lengths(wanted_lengths, blade_width, measured_lengths=None):
+    """
+    Suggest standard board lengths to buy, taking already-measured boards into account.
+    measured_lengths: boards already available (already owned/measured) – these are
+    used first to cover as many cuts as possible before adding new boards to buy.
+    """
     if not wanted_lengths:
         return []
 
     sorted_wanted = sorted(wanted_lengths, reverse=True)
+    measured_sorted = sorted(measured_lengths or [], reverse=True)
     standard_lengths = [180, 210, 240, 270, 300, 330, 360, 390, 420, 450, 480, 510, 540, 570, 600]
 
+    # First, greedily fill cuts using already-measured boards
+    pre_bins = []
+    remaining_cuts = []
+    pre_pool = list(measured_sorted)
+
+    for cut in sorted_wanted:
+        placed = False
+        for b in pre_bins:
+            kerf = blade_width if b['cuts'] else 0
+            if b['remaining'] >= cut + kerf:
+                b['remaining'] -= (cut + kerf)
+                b['cuts'].append(cut)
+                placed = True
+                break
+        if not placed:
+            suitable = next((i for i, blen in enumerate(pre_pool) if blen >= cut), None)
+            if suitable is not None:
+                blen = pre_pool.pop(suitable)
+                pre_bins.append({'cuts': [cut], 'remaining': blen - cut,
+                                 'original': blen, 'is_measured': True})
+                placed = True
+        if not placed:
+            remaining_cuts.append(cut)
+
+    # Now simulate adding standard boards to cover remaining_cuts
     suggestions = []
 
+    if not remaining_cuts:
+        # Everything is already covered by measured boards – no new boards needed
+        total_measured_used = sum(b['original'] for b in pre_bins)
+        total_waste_measured = sum(b['remaining'] for b in pre_bins)
+        suggestions.append({
+            'length_cm': None,
+            'num_boards': 0,
+            'num_measured_used': len(pre_bins),
+            'total_material_cm': total_measured_used,
+            'total_waste_cm': round(total_waste_measured, 1),
+            'waste_pct': round(total_waste_measured / total_measured_used * 100, 1) if total_measured_used else 0,
+            'all_covered_by_measured': True,
+        })
+        return suggestions
+
     for std_len in standard_lengths:
-        sim_bins = []
-        for cut in sorted_wanted:
+        # Start fresh with the pre_bins from measured boards, add standard boards as needed
+        sim_bins = [dict(b) for b in pre_bins]  # copy measured bins
+        new_board_count = 0
+
+        for cut in remaining_cuts:
             placed = False
             for b in sim_bins:
                 kerf = blade_width if b['cuts'] else 0
@@ -430,31 +531,43 @@ def suggest_optimal_lengths(wanted_lengths, blade_width):
                     break
             if not placed:
                 if std_len >= cut:
-                    sim_bins.append({'cuts': [cut], 'remaining': std_len - cut, 'original': std_len})
-
-        if not sim_bins:
-            continue
+                    sim_bins.append({'cuts': [cut], 'remaining': std_len - cut,
+                                     'original': std_len, 'is_measured': False})
+                    new_board_count += 1
 
         total_placed = sum(len(b['cuts']) for b in sim_bins)
         if total_placed < len(sorted_wanted):
             continue
 
-        num_boards = len(sim_bins)
-        total_material = num_boards * std_len
-        total_waste = sum(b['remaining'] for b in sim_bins)
-        waste_pct = (total_waste / total_material * 100) if total_material > 0 else 100
+        new_bins = [b for b in sim_bins if not b.get('is_measured')]
+        total_new_material = new_board_count * std_len
+        total_new_waste = sum(b['remaining'] for b in new_bins)
+        total_all_material = total_new_material + sum(b['original'] for b in pre_bins)
+        total_all_waste = total_new_waste + sum(b['remaining'] for b in pre_bins)
+        waste_pct = (total_all_waste / total_all_material * 100) if total_all_material else 100
 
         suggestions.append({
             'length_cm': std_len,
-            'num_boards': num_boards,
-            'total_material_cm': total_material,
-            'total_waste_cm': round(total_waste, 1),
+            'num_boards': new_board_count,
+            'num_measured_used': len(pre_bins),
+            'total_material_cm': round(total_all_material, 1),
+            'total_new_material_cm': round(total_new_material, 1),
+            'total_waste_cm': round(total_all_waste, 1),
             'waste_pct': round(waste_pct, 1),
-            'cuts_per_board': [b['cuts'] for b in sim_bins]
+            'cuts_per_board': [b['cuts'] for b in new_bins],
+            'all_covered_by_measured': False,
         })
 
-    suggestions.sort(key=lambda x: (x['waste_pct'], x['num_boards']))
-    return suggestions[:5]
+    suggestions.sort(key=lambda x: (x['num_boards'], x['waste_pct']))
+
+    # Keep only the best suggestion per number of new boards to buy
+    best_per_count = {}
+    for s in suggestions:
+        n = s['num_boards']
+        if n not in best_per_count:
+            best_per_count[n] = s
+
+    return sorted(best_per_count.values(), key=lambda x: x['num_boards'])
 
 
 def render_cut_image(stock, blade_width, index):
@@ -465,35 +578,41 @@ def render_cut_image(stock, blade_width, index):
     ax.set_xlabel("Lengde (cm)", fontsize=9)
     ax.set_title(f"Planke {index + 1}: {stock['original_length']:.1f} cm", fontsize=10, pad=4)
 
-    x = 0
-    cut_colors = ['#2196F3', '#1565C0', '#42A5F5', '#0D47A1', '#64B5F6']
+    is_unused = stock.get('unused', False) or not stock['cuts']
 
-    for ci, cut in enumerate(stock['cuts']):
-        color = cut_colors[ci % len(cut_colors)]
-        ax.broken_barh([(x, cut)], (-0.4, 0.8), facecolors=color, edgecolors='white', linewidth=1)
-        if cut > stock['original_length'] * 0.05:
-            ax.text(x + cut / 2, 0, f'{cut:.1f}', ha='center', va='center',
-                    color='white', fontsize=8, fontweight='bold')
-        x += cut
+    if is_unused:
+        ax.broken_barh([(0, stock['original_length'])], (-0.4, 0.8),
+                       facecolors='#90A4AE', edgecolors='white', linewidth=1)
+        ax.text(stock['original_length'] / 2, 0,
+                f"Ikke i bruk – {stock['original_length']:.1f} cm",
+                ha='center', va='center', color='white', fontsize=9, fontweight='bold')
+        legend_elements = [mpatches.Patch(color='#90A4AE', label='Ikke i bruk')]
+    else:
+        x = 0
+        cut_colors = ['#2196F3', '#1565C0', '#42A5F5', '#0D47A1', '#64B5F6']
+        for ci, cut in enumerate(stock['cuts']):
+            color = cut_colors[ci % len(cut_colors)]
+            ax.broken_barh([(x, cut)], (-0.4, 0.8), facecolors=color, edgecolors='white', linewidth=1)
+            if cut > stock['original_length'] * 0.05:
+                ax.text(x + cut / 2, 0, f'{cut:.1f}', ha='center', va='center',
+                        color='white', fontsize=8, fontweight='bold')
+            x += cut
+            if ci < len(stock['cuts']) - 1:
+                ax.broken_barh([(x, blade_width)], (-0.4, 0.8), facecolors='#424242', edgecolors='white', linewidth=0.5)
+                x += blade_width
+        if stock['remaining_length'] > 0:
+            ax.broken_barh([(x, stock['remaining_length'])], (-0.4, 0.8),
+                           facecolors='#EF5350', edgecolors='white', linewidth=1)
+            if stock['remaining_length'] > stock['original_length'] * 0.03:
+                ax.text(x + stock['remaining_length'] / 2, 0,
+                        f"Avkapp\n{stock['remaining_length']:.1f}", ha='center', va='center',
+                        color='white', fontsize=7)
+        legend_elements = [
+            mpatches.Patch(color='#2196F3', label='Kutt'),
+            mpatches.Patch(color='#424242', label=f'Sagblad ({blade_width} cm)'),
+            mpatches.Patch(color='#EF5350', label='Avkapp'),
+        ]
 
-        # FIXED: sagblad kun mellom kutt, ikke etter siste kutt
-        if ci < len(stock['cuts']) - 1:
-            ax.broken_barh([(x, blade_width)], (-0.4, 0.8), facecolors='#424242', edgecolors='white', linewidth=0.5)
-            x += blade_width
-
-    if stock['remaining_length'] > 0:
-        ax.broken_barh([(x, stock['remaining_length'])], (-0.4, 0.8),
-                       facecolors='#EF5350', edgecolors='white', linewidth=1)
-        if stock['remaining_length'] > stock['original_length'] * 0.03:
-            ax.text(x + stock['remaining_length'] / 2, 0,
-                    f"Avkapp\n{stock['remaining_length']:.1f}", ha='center', va='center',
-                    color='white', fontsize=7)
-
-    legend_elements = [
-        mpatches.Patch(color='#2196F3', label='Kutt'),
-        mpatches.Patch(color='#424242', label=f'Sagblad ({blade_width} cm)'),
-        mpatches.Patch(color='#EF5350', label='Avkapp'),
-    ]
     ax.legend(handles=legend_elements, loc='upper right', fontsize=7, framealpha=0.8)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -541,11 +660,41 @@ def suggest_lengths():
     if not data:
         return jsonify({'error': 'Ugyldig JSON'}), 400
     wanted_lengths = data.get('wanted_lengths', [])
+    measured_lengths = data.get('measured_lengths', [])
     blade_width = data.get('blade_width', 0.3)
     if not wanted_lengths:
         return jsonify({'error': 'Ingen ønskede lengder angitt'}), 400
-    suggestions = suggest_optimal_lengths(wanted_lengths, blade_width)
-    return jsonify({'suggestions': suggestions})
+
+    # Determine which wanted cuts are already covered by measured lengths.
+    # We greedily fit as many wanted cuts as possible into the measured boards,
+    # then treat the remainder as "still needed".
+    remaining_wanted = wanted_lengths[:]
+    if measured_lengths:
+        covered = _greedy_cover(
+            sorted(wanted_lengths, reverse=True),
+            sorted(measured_lengths, reverse=True),
+            blade_width
+        )
+        # Remove covered cuts from the wanted list
+        remaining_pool = [round(w, 4) for w in wanted_lengths]
+        for c in covered:
+            rc = round(c, 4)
+            if rc in remaining_pool:
+                remaining_pool.remove(rc)
+        remaining_wanted = remaining_pool
+
+    # Pass all wanted lengths + measured lengths – suggest_optimal_lengths
+    # internally figures out what is already covered by measured boards
+    suggestions = suggest_optimal_lengths(
+        wanted_lengths,
+        blade_width,
+        measured_lengths=measured_lengths
+    )
+    return jsonify({
+        'suggestions': suggestions,
+        'remaining_wanted': remaining_wanted,
+        'all_covered': len(remaining_wanted) == 0 and len(measured_lengths) > 0
+    })
 
 
 @app.route('/calculate_cuts', methods=['POST'])
@@ -573,6 +722,22 @@ def calculate_cuts():
     results = solve_cutting_stock_ffd(wanted_lengths, measured_lengths, blade_width)
     if isinstance(results, dict) and 'error' in results:
         return jsonify({"error": results['error'], "total_wanted": total_wanted}), 400
+
+    # Add unused measured boards (not picked by FFD) as empty entries
+    used_lengths = sorted([s['original_length'] for s in results], reverse=True)
+    remaining_pool = sorted(measured_lengths[:], reverse=True)
+    for ul in used_lengths:
+        for i, ml in enumerate(remaining_pool):
+            if abs(ml - ul) < 0.01:
+                remaining_pool.pop(i)
+                break
+    for unused in remaining_pool:
+        results.append({
+            'cuts': [],
+            'remaining_length': unused,
+            'original_length': unused,
+            'unused': True
+        })
 
     # FIXED: correct waste calculation
     total_kerfs = sum(max(0, len(s['cuts']) - 1) for s in results) * blade_width
@@ -670,8 +835,6 @@ def export_pdf():
     story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#BBDEFB'), spaceAfter=8))
 
     for i, stock in enumerate(results):
-        story.append(Paragraph(f"Planke {i+1}  -  Maalt lengde: {stock['original_length']:.1f} cm", heading_style))
-
         num_kerfs = max(0, len(stock['cuts']) - 1)
         used_for_cuts = sum(stock['cuts'])
 
@@ -692,16 +855,23 @@ def export_pdf():
             ('PADDING', (0, 0), (-1, -1), 6),
             ('ROWBACKGROUNDS', (1, 0), (-1, -1), [colors.white, colors.HexColor('#F5F5F5')]),
         ]))
-        story.append(board_table)
 
         img_b64 = render_cut_image(stock, blade_width, i)
         img_bytes = base64.b64decode(img_b64)
         img_buf = io.BytesIO(img_bytes)
         rl_img = RLImage(img_buf, width=16*cm, height=2.6*cm)
-        story.append(Spacer(1, 0.3*cm))
-        story.append(rl_img)
-        story.append(Spacer(1, 0.4*cm))
-        story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor('#BBDEFB'), spaceAfter=4))
+
+        # KeepTogether ensures heading + description table + visual stay on same page
+        board_block = KeepTogether([
+            Paragraph(f"Planke {i+1}  -  Maalt lengde: {stock['original_length']:.1f} cm", heading_style),
+            Spacer(1, 0.2*cm),
+            board_table,
+            Spacer(1, 0.3*cm),
+            rl_img,
+            Spacer(1, 0.3*cm),
+            HRFlowable(width="100%", thickness=0.5, color=colors.HexColor('#BBDEFB'), spaceAfter=4),
+        ])
+        story.append(board_block)
 
     doc.build(story)
     buf.seek(0)

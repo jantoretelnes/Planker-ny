@@ -8,7 +8,6 @@ document.addEventListener('DOMContentLoaded', function () {
   const startCameraBtn           = document.getElementById('start-camera-btn');
   const closeCameraBtn           = document.getElementById('close-camera-btn');
   const closeCameraModalBtn      = document.getElementById('close-camera-modal-btn');
-  const scannedBarcodesList      = document.getElementById('scanned-barcodes');
   const cameraModal              = document.getElementById('camera-modal');
   const cameraStatus             = document.getElementById('camera-status');
   const scanResult               = document.getElementById('scan-result');
@@ -20,16 +19,22 @@ document.addEventListener('DOMContentLoaded', function () {
   const suggestionsContainer     = document.getElementById('suggestions-container');
   const exportPdfBtn             = document.getElementById('export-pdf-btn');
 
-  // Guard: abort if critical elements are missing
+  // Warn about missing elements but don't abort – core functionality still works
   const required = {
     addWantedLengthButton, addMeasuredLengthButton, wantedLengthsContainer,
-    measuredLengthsContainer, resultsDisplay, startCameraBtn, closeCameraBtn,
-    closeCameraModalBtn, scannedBarcodesList, cameraModal, cameraStatus,
-    scanResult, cameraSelectWrapper, cameraSelect, bladeWidthInput, unitPriceInput,
-    suggestionsSection, suggestionsContainer, exportPdfBtn
+    measuredLengthsContainer, resultsDisplay, bladeWidthInput, unitPriceInput
   };
   for (const [name, el] of Object.entries(required)) {
-    if (!el) { console.error(`Manglende element: #${name}`); return; }
+    if (!el) { console.error(`Manglende kjerne-element: #${name}`); return; }
+  }
+  // Optional elements – warn but continue
+  const optional = {
+    startCameraBtn, closeCameraBtn, closeCameraModalBtn,
+    cameraModal, cameraStatus, scanResult, cameraSelectWrapper, cameraSelect,
+    suggestionsSection, suggestionsContainer, exportPdfBtn, resultsHeader
+  };
+  for (const [name, el] of Object.entries(optional)) {
+    if (!el) { console.warn(`Valgfritt element mangler: #${name}`); }
   }
 
   let scannedBarcodes = [];
@@ -42,9 +47,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
   addWantedLengthButton.addEventListener('click', () => addInputGroup('wanted'));
   addMeasuredLengthButton.addEventListener('click', () => addInputGroup('measured'));
-  startCameraBtn.addEventListener('click', initializeCamera);
-  closeCameraBtn.addEventListener('click', closeCamera);
-  closeCameraModalBtn.addEventListener('click', closeCamera);
+  if (startCameraBtn) startCameraBtn.addEventListener('click', initializeCamera);
+  if (closeCameraBtn) closeCameraBtn.addEventListener('click', closeCamera);
+  if (closeCameraModalBtn) closeCameraModalBtn.addEventListener('click', closeCamera);
 
   // FIXED: also listen to unitPriceInput changes
   wantedLengthsContainer.addEventListener('input', debouncedSend);
@@ -52,7 +57,7 @@ document.addEventListener('DOMContentLoaded', function () {
   bladeWidthInput.addEventListener('input', debouncedSend);
   unitPriceInput.addEventListener('input', debouncedSend);
 
-  exportPdfBtn.addEventListener('click', exportPdf);
+  if (exportPdfBtn) exportPdfBtn.addEventListener('click', exportPdf);
 
   // Debounce to avoid too many API calls while typing
   function debouncedSend() {
@@ -175,7 +180,7 @@ document.addEventListener('DOMContentLoaded', function () {
     .then(r => r.json())
     .then(parsed => {
       if (!parsed.valid) {
-        scanResult.textContent = '❌ Ugyldig strekkode: ' + (parsed.error || 'ukjent format');
+        scanResult.textContent = '❌ Ugyldig strekkode: ' + barcode + ' – ' + (parsed.error || 'ukjent format');
         scanResult.style.backgroundColor = '#ffebee';
         scanResult.style.color = '#c62828';
         return;
@@ -187,18 +192,10 @@ document.addEventListener('DOMContentLoaded', function () {
         timestamp: new Date().toLocaleTimeString('nb-NO'),
         date: new Date().toLocaleDateString('nb-NO')
       };
-      if (scannedBarcodes.some(b => b.barcode === entry.barcode)) {
-        scanResult.textContent = '⚠️ Strekkode allerede skannet';
-        scanResult.style.backgroundColor = '#fff3cd';
-        scanResult.style.color = '#856404';
-        setTimeout(() => { scanResult.textContent = ''; }, 2000);
-        return;
-      }
       scanResult.textContent = `✓ Skannet: ${entry.length.toFixed(1)} cm`;
       scanResult.style.backgroundColor = '#c8e6c9';
       scanResult.style.color = '#2e7d32';
       scannedBarcodes.push(entry);
-      updateScannedBarcodesList();
       addScannedBarcodeToMeasured(entry);
       sendDataToBackend();
       setTimeout(() => closeCamera(), 2000);
@@ -276,43 +273,85 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // ── Suggestions ──────────────────────────────────────────────────────────────
 
-  function fetchSuggestions(wantedLengths, bladeWidth) {
+  function fetchSuggestions(wantedLengths, measuredLengths, bladeWidth) {
     if (wantedLengths.length === 0) {
-      suggestionsSection.style.display = 'none';
+      if (suggestionsSection) suggestionsSection.style.display = 'none';
       return;
     }
     fetch('/suggest_lengths', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ wanted_lengths: wantedLengths, blade_width: bladeWidth })
+      body: JSON.stringify({
+        wanted_lengths: wantedLengths,
+        measured_lengths: measuredLengths,
+        blade_width: bladeWidth
+      })
     })
     .then(r => r.json())
     .then(data => {
-      if (!data.suggestions || data.suggestions.length === 0) {
-        suggestionsSection.style.display = 'none';
+      if (suggestionsSection) suggestionsSection.style.display = 'block';
+
+      if (data.all_covered) {
+        renderSuggestionsCovered();
         return;
       }
-      renderSuggestions(data.suggestions);
-      suggestionsSection.style.display = 'block';
+      if (!data.suggestions || data.suggestions.length === 0) {
+        if (suggestionsSection) suggestionsSection.style.display = 'none';
+        return;
+      }
+      renderSuggestions(data.suggestions, data.remaining_wanted || [], measuredLengths);
     })
-    .catch(() => { suggestionsSection.style.display = 'none'; });
+    .catch(() => { if (suggestionsSection) suggestionsSection.style.display = 'none'; });
   }
 
-  function renderSuggestions(suggestions) {
+  function renderSuggestionsCovered() {
+    if (!suggestionsContainer) return;
+    suggestionsContainer.innerHTML = `
+      <div class="suggestions-covered">
+        ✅ Alle ønskede lengder er dekket av registrerte planker!
+      </div>`;
+  }
+
+  function renderSuggestions(suggestions, remainingWanted, measuredLengths) {
+    if (!suggestionsContainer) return;
     suggestionsContainer.innerHTML = '';
+
+    // Status header when measured boards are registered
+    if (measuredLengths.length > 0 && remainingWanted.length > 0) {
+      const totalRem = remainingWanted.reduce((a, b) => a + b, 0);
+      const statusEl = document.createElement('div');
+      statusEl.className = 'suggestions-status';
+      statusEl.innerHTML = `📏 Gjenstående behov: <strong>${remainingWanted.length} biter</strong>
+        (${totalRem.toFixed(1)} cm) – forslag inkluderer allerede målte planker:`;
+      suggestionsContainer.appendChild(statusEl);
+    }
+
     suggestions.forEach((s, i) => {
       const card = document.createElement('div');
       card.className = 'suggestion-card' + (i === 0 ? ' best' : '');
-
       const badge = i === 0 ? '<span class="best-badge">✅ Beste valg</span>' : '';
+
+      const hasMeasured = s.num_measured_used > 0;
+      const measuredInfo = hasMeasured
+        ? `<span>📐 Bruker ${s.num_measured_used} målte planke${s.num_measured_used !== 1 ? 'r' : ''}</span>`
+        : '';
+
+      const boardsLabel = s.num_boards === 0
+        ? '<span>🛒 Ingen nye planker nødvendig</span>'
+        : `<span>🛒 Kjøp: ${s.num_boards} × ${s.length_cm} cm</span>`;
+
       card.innerHTML = `
         ${badge}
-        <div class="suggestion-length">${s.length_cm} cm</div>
+        ${s.num_boards > 0
+          ? `<div class="suggestion-length">${s.length_cm} cm</div>`
+          : `<div class="suggestion-length" style="font-size:1rem">Alt dekket!</div>`
+        }
         <div class="suggestion-stats">
-          <span>📦 ${s.num_boards} planke${s.num_boards !== 1 ? 'r' : ''}</span>
+          ${boardsLabel}
+          ${measuredInfo}
           <span>🗑️ Svinn: ${s.waste_pct}%</span>
           <span>📐 Avkapp: ${s.total_waste_cm} cm</span>
-          <span>📏 Totalt: ${s.total_material_cm} cm</span>
+          <span>📏 Totalt material: ${s.total_material_cm} cm</span>
         </div>
       `;
       suggestionsContainer.appendChild(card);
@@ -324,12 +363,12 @@ document.addEventListener('DOMContentLoaded', function () {
   function sendDataToBackend() {
     const data = getInputs();
 
-    // Show suggestions as soon as we have wanted lengths (even without measured)
-    fetchSuggestions(data.wanted_lengths, data.blade_width);
+    // Recalculate suggestions whenever wanted OR measured lengths change
+    fetchSuggestions(data.wanted_lengths, data.measured_lengths, data.blade_width);
 
     if (data.wanted_lengths.length === 0 || data.measured_lengths.length === 0) {
       resultsDisplay.innerHTML = '';
-      resultsHeader.style.display = 'none';
+      if (resultsHeader) resultsHeader.style.display = 'none';
       lastCutData = null;
       return;
     }
@@ -343,13 +382,16 @@ document.addEventListener('DOMContentLoaded', function () {
     .then(cutData => {
       if (cutData.error) {
         resultsDisplay.innerHTML = `<div class="error-msg">⚠️ ${cutData.error}</div>`;
-        resultsHeader.style.display = 'none';
+        if (resultsHeader) resultsHeader.style.display = 'none';
+        if (suggestionsSection) suggestionsSection.style.display = 'block';
         lastCutData = null;
         return Promise.reject(null);
       }
       lastCutData = { ...cutData, blade_width: data.blade_width, unit_price: data.unit_price };
       displayResults(cutData, data.unit_price);
-      resultsHeader.style.display = 'flex';
+      if (resultsHeader) resultsHeader.style.display = 'flex';
+      // Hide suggestions when a valid cutting plan exists
+      if (suggestionsSection) suggestionsSection.style.display = 'none';
       return fetch('/visualize_cuts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -358,13 +400,13 @@ document.addEventListener('DOMContentLoaded', function () {
     })
     .then(r => r.json())
     .then(imageData => {
-      const stockItems = document.querySelectorAll('.stock-item');
       imageData.images.forEach((imgData, i) => {
+        const placeholder = document.querySelector(`.stock-img-placeholder[data-index="${i}"]`);
+        if (!placeholder) return;
         const img = document.createElement('img');
         img.src = 'data:image/png;base64,' + imgData;
         img.alt = `Planke ${i + 1}`;
-        img.style.marginTop = '10px';
-        if (stockItems[i]) stockItems[i].appendChild(img);
+        placeholder.replaceWith(img);
       });
     })
     .catch(err => {
@@ -388,17 +430,26 @@ document.addEventListener('DOMContentLoaded', function () {
     </div>`;
 
     data.results.forEach((stock, index) => {
-      html += `<div class="stock-item">
-        <h3>Planke ${index + 1} – ${stock.original_length.toFixed(1)} cm</h3>
-        <div class="stock-stats">
-          <span>✂️ Kutt: ${stock.cuts.length}</span>
-          <span>🗑️ Avkapp: ${stock.remaining_length.toFixed(1)} cm</span>
-        </div>
-        <ul>`;
+      const isUnused = stock.unused === true;
+      let cutsHtml = '';
       stock.cuts.forEach((cut, ci) => {
-        html += `<li><span class="cut-num">#${ci + 1}</span> ${cut.toFixed(1)} cm</li>`;
+        cutsHtml += `<li><span class="cut-num">#${ci + 1}</span> ${cut.toFixed(1)} cm</li>`;
       });
-      html += `</ul></div>`;
+
+      const unusedBadge = isUnused ? '<span class="unused-badge">Ikke i bruk</span>' : '';
+      const statsHtml = isUnused
+        ? `<div class="stock-stats"><span>📏 Hele planken er ubrukt</span></div>`
+        : `<div class="stock-stats">
+            <span>✂️ Kutt: ${stock.cuts.length}</span>
+            <span>🗑️ Avkapp: ${stock.remaining_length.toFixed(1)} cm</span>
+           </div>
+           <ul>${cutsHtml}</ul>`;
+
+      html += `<div class="stock-item${isUnused ? ' stock-unused' : ''}">
+        <h3>Planke ${index + 1} – ${stock.original_length.toFixed(1)} cm ${unusedBadge}</h3>
+        <div class="stock-img-placeholder" data-index="${index}"></div>
+        ${statsHtml}
+      </div>`;
     });
 
     resultsDisplay.innerHTML = html;
@@ -407,7 +458,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // ── PDF Export ────────────────────────────────────────────────────────────────
 
   function exportPdf() {
-    if (!lastCutData) return;
+    if (!lastCutData || !exportPdfBtn) return;
     exportPdfBtn.textContent = '⏳ Genererer PDF...';
     exportPdfBtn.disabled = true;
 
@@ -439,42 +490,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // ── Barcode list ──────────────────────────────────────────────────────────────
 
-  function updateScannedBarcodesList() {
-    scannedBarcodesList.innerHTML = '';
-    scannedBarcodes.forEach((barcode, index) => {
-      const item = document.createElement('div');
-      item.className = 'scanned-item';
 
-      const info = document.createElement('div');
-      info.className = 'barcode-info';
-
-      const length = document.createElement('strong');
-      length.textContent = `${barcode.length.toFixed(1)} cm`;
-
-      const details = document.createElement('small');
-      details.textContent = `${barcode.date} ${barcode.timestamp} | ${barcode.producer}`;
-
-      info.appendChild(length);
-      info.appendChild(details);
-
-      const removeBtn = document.createElement('button');
-      removeBtn.className = 'remove-barcode';
-      removeBtn.textContent = 'Fjern';
-      removeBtn.onclick = () => {
-        scannedBarcodes.splice(index, 1);
-        updateScannedBarcodesList();
-        const matchingRow = measuredLengthsContainer.querySelector(
-          `[data-barcode-id="${CSS.escape(barcode.barcode)}"]`
-        );
-        if (matchingRow) matchingRow.remove();
-        sendDataToBackend();
-      };
-
-      item.appendChild(info);
-      item.appendChild(removeBtn);
-      scannedBarcodesList.appendChild(item);
-    });
-  }
 
   function addScannedBarcodeToMeasured(parsed) {
     const inputGroup = document.createElement('div');
