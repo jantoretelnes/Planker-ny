@@ -523,13 +523,15 @@ document.addEventListener('DOMContentLoaded', function () {
     quantityInput.placeholder = 'Antall'; quantityInput.style.width = '8ch';
 
     // NOBB-lenke med GTIN fra strekkoden
-    const gtin = parsed.product_code || parsed.producer || '';
+    // Use 14 digits if starts with 0, otherwise 13 digits
+    const rawGtin = parsed.product_code || parsed.producer || '';
+    const gtin = rawGtin.startsWith('0') ? rawGtin.padStart(14, '0').slice(0, 14) : rawGtin.slice(0, 13);
     const nobbBtn = document.createElement('a');
     nobbBtn.href = `https://nobb.no/items/search?gtins=${gtin}&newSearch=True`;
     nobbBtn.target = '_blank';
     nobbBtn.rel = 'noopener noreferrer';
     nobbBtn.className = 'nobb-btn';
-    nobbBtn.textContent = `🔍 ${gtin}`;
+    nobbBtn.textContent = '🔍';
     nobbBtn.title = `Søk opp GTIN ${gtin} på NOBB`;
 
     const removeButton = document.createElement('button');
