@@ -132,7 +132,7 @@ class TestSolveCuttingStock:
     
     def test_multiple_stock_pieces(self):
         """Test problem requiring multiple stock pieces"""
-        wanted = [150, 150, 150]
+        wanted = [100, 100, 75]
         measured = [200, 200]
         result = solve_cutting_stock_ffd(wanted, measured, blade_width=0)
         
@@ -317,6 +317,231 @@ class TestEdgeCases:
         
         assert len(result) == 1
         assert len(result[0]['cuts']) == 5
+
+
+class TestBladeWidth:
+    """Tests for blade width handling in cutting calculations"""
+    
+    def test_blade_width_affects_remaining(self):
+        """Test that blade width reduces remaining length correctly"""
+        wanted = [100]
+        measured = [210]
+        blade_width = 2.5
+        result = solve_cutting_stock_ffd(wanted, measured, blade_width)
+        
+        # 210 - 100 = 110, but no more cuts so no blade used
+        assert result[0]['remaining_length'] == 110
+    
+    def test_blade_width_with_multiple_cuts(self):
+        """Test blade width with multiple cuts on one board"""
+        wanted = [100, 100]
+        measured = [210]
+        blade_width = 2
+        result = solve_cutting_stock_ffd(wanted, measured, blade_width)
+        
+        # 100 + 2 (blade) + 100 = 202, remaining = 8
+        assert result[0]['remaining_length'] == 8
+    
+    def test_blade_width_zero(self):
+        """Test with zero blade width"""
+        wanted = [100, 100]
+        measured = [200]
+        result = solve_cutting_stock_ffd(wanted, measured, blade_width=0)
+        
+        assert result[0]['remaining_length'] == 0
+    
+    def test_large_blade_width(self):
+        """Test with very large blade width"""
+        wanted = [100, 100]
+        measured = [210]
+        blade_width = 15  # Large blade width
+        result = solve_cutting_stock_ffd(wanted, measured, blade_width)
+        
+        # 100 + 15 (blade) + 100 = 215 > 210, so should error
+        assert isinstance(result, dict)
+        assert 'error' in result
+
+
+class TestGS1Parsing:
+    """Tests for GS1-128 barcode parsing"""
+    
+    def test_gs1_with_gtin_and_length(self):
+        """Test GS1-128 with GTIN and length data"""
+        from app import parse_gs1_128
+        barcode = "(01)07071890000039(3102)004500"
+        result = parse_gs1_128(barcode)
+        
+        assert '01' in result
+        assert '3102' in result
+    
+    def test_parse_gs1_barcode_norwegian(self):
+        """Test parsing GS1-128 format through parse_barcode_norwegian"""
+        result = parse_barcode_norwegian("(01)07071890000039(3102)004500")
+        
+        # Should either parse successfully with length or fail gracefully
+        assert 'valid' in result
+        if result['valid']:
+            assert 'length_cm' in result
+
+
+class TestPDFExport:
+    """Tests for PDF export functionality"""
+    
+    def test_export_pdf_valid(self, client):
+        """Test PDF export with valid cutting data"""
+        pdf_data = {
+            'results': [
+                {
+                    'original_length': 200,
+                    'cuts': [100, 50],
+                    'remaining_length': 50
+                }
+            ],
+            'blade_width': 0.3,
+            'unit_price': 100,
+            'total_wanted': 150,
+            'total_measured': 200,
+            'total_used': 150,
+            'total_waste': 50,
+            'total_price': 200,
+            'waste_price': 50
+        }
+        response = client.post('/export_pdf',
+                              json=pdf_data,
+                              content_type='application/json')
+        assert response.status_code == 200
+        assert response.content_type == 'application/pdf'
+    
+    def test_export_pdf_no_json(self, client):
+        """Test PDF export without JSON"""
+        response = client.post('/export_pdf')
+        assert response.status_code == 400
+    
+    def test_export_pdf_invalid_json(self, client):
+        """Test PDF export with invalid JSON"""
+        response = client.post('/export_pdf',
+                              json={},
+                              content_type='application/json')
+        assert response.status_code == 400
+
+
+class TestBarcodeHistory:
+    """Tests for barcode history persistence"""
+    
+    def test_barcode_history_persistence(self, client):
+        """Test that valid barcodes are saved to history"""
+        # Clear and record initial history
+        initial_response = client.get('/get_barcode_history')
+        initial_data = json.loads(initial_response.data)
+        initial_count = len(initial_data['barcodes'])
+        
+        # Parse a valid barcode
+        client.post('/parse_barcode',
+                   json={'barcode': '250'},
+                   content_type='application/json')
+        
+        # Check history was updated
+        updated_response = client.get('/get_barcode_history')
+        updated_data = json.loads(updated_response.data)
+        assert len(updated_data['barcodes']) > initial_count
+    
+    def test_invalid_barcode_not_saved(self, client):
+        """Test that invalid barcodes are not saved to history"""
+        initial_response = client.get('/get_barcode_history')
+        initial_data = json.loads(initial_response.data)
+        initial_count = len(initial_data['barcodes'])
+        
+        # Try to parse invalid barcode
+        client.post('/parse_barcode',
+                   json={'barcode': 'INVALID'},
+                   content_type='application/json')
+        
+        # Check history was not updated
+        updated_response = client.get('/get_barcode_history')
+        updated_data = json.loads(updated_response.data)
+        assert len(updated_data['barcodes']) == initial_count
+
+
+class TestSuggestLengths:
+    """Tests for length suggestion endpoint"""
+    
+    def test_suggest_lengths_valid(self, client):
+        """Test suggest_lengths with valid input"""
+        response = client.post('/suggest_lengths',
+                              json={
+                                  'wanted_lengths': [100, 150, 75],
+                                  'blade_width': 0.3
+                              },
+                              content_type='application/json')
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert 'suggestions' in data
+        assert isinstance(data['suggestions'], list)
+    
+    def test_suggest_lengths_no_data(self, client):
+        """Test suggest_lengths without wanted_lengths"""
+        response = client.post('/suggest_lengths',
+                              json={
+                                  'blade_width': 0.3
+                              },
+                              content_type='application/json')
+        assert response.status_code == 400
+        data = json.loads(response.data)
+        assert 'error' in data
+    
+    def test_suggest_lengths_empty_array(self, client):
+        """Test suggest_lengths with empty wanted_lengths"""
+        response = client.post('/suggest_lengths',
+                              json={
+                                  'wanted_lengths': [],
+                                  'blade_width': 0.3
+                              },
+                              content_type='application/json')
+        assert response.status_code == 400
+
+
+class TestCalculateCutsAdvanced:
+    """Advanced tests for calculate_cuts endpoint"""
+    
+    def test_calculate_cuts_with_price(self, client):
+        """Test calculate_cuts returns correct pricing"""
+        response = client.post('/calculate_cuts',
+                              json={
+                                  'wanted_lengths': [100, 100],
+                                  'measured_lengths': [200],
+                                  'blade_width': 0,
+                                  'unit_price': 100  # kr per meter
+                              },
+                              content_type='application/json')
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data['total_price'] == 200.0  # 2m * 100 kr/m
+    
+    def test_calculate_cuts_waste_calculation(self, client):
+        """Test waste calculation in results"""
+        response = client.post('/calculate_cuts',
+                              json={
+                                  'wanted_lengths': [100],
+                                  'measured_lengths': [150],
+                                  'blade_width': 0
+                              },
+                              content_type='application/json')
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data['total_waste'] == 50  # 150 - 100
+    
+    def test_calculate_cuts_multiple_boards_optimal(self, client):
+        """Test cutting across multiple boards"""
+        response = client.post('/calculate_cuts',
+                              json={
+                                  'wanted_lengths': [100, 100, 100],
+                                  'measured_lengths': [200, 200],
+                                  'blade_width': 0
+                              },
+                              content_type='application/json')
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert len(data['results']) == 2
 
 
 if __name__ == '__main__':

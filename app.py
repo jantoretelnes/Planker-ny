@@ -362,7 +362,7 @@ def parse_barcode_norwegian(barcode):
                 'barcode': barcode,
                 'format': 'numeric',
                 'length_cm': round(length, 1),
-                'producer': 'manuell',
+                'producer': 'manual_entry',
                 'product_code': 'ukjent',
                 'timestamp': timestamp
             }
@@ -390,7 +390,7 @@ def parse_barcode_norwegian(barcode):
     return {
         'valid': False,
         'barcode': barcode,
-        'error': 'Ukjent strekkodeformat. Støttede formater: GS1-128, EAN-13, numerisk cm, L-prefiks (mm)'
+        'error': 'Ukjent strekkodeformat'
     }
 
 
@@ -412,10 +412,16 @@ def solve_cutting_stock_ffd(wanted_lengths, measured_lengths, blade_width):
         if not placed:
             if not stock_pool:
                 return {"error": "Ikke nok målte planker. Legg til flere målte lengder."}
-            suitable = next((i for i, b in enumerate(stock_pool) if b >= length), None)
+            suitable = None
+            for i, b in enumerate(stock_pool):
+                if b >= length:
+                    suitable = i
+                    break
             if suitable is None:
                 return {"error": f"Ingen planke er lang nok for kuttet {length} cm (lengste planke: {stock_pool[0]} cm)"}
             new_bin_length = stock_pool.pop(suitable)
+            # Calculate remaining after placing the cut
+            kerf_after = blade_width if len(sorted_lengths) > sorted_lengths.index(length) + 1 else 0
             new_bin = {
                 'cuts': [length],
                 'remaining_length': new_bin_length - length,
@@ -636,11 +642,13 @@ def index():
 @app.route('/parse_barcode', methods=['POST'])
 def parse_barcode():
     data = request.get_json(silent=True)
-    if not data:
+    if data is None:
         return jsonify({'error': 'Ugyldig eller manglende JSON'}), 400
+    if not data:
+        return jsonify({'valid': False, 'error': 'Strekkode er tom'}), 200
     barcode = data.get('barcode', '').strip()
     if not barcode:
-        return jsonify({'error': 'Strekkode er tom'}), 400
+        return jsonify({'valid': False, 'error': 'Strekkode er tom'}), 200
     result = parse_barcode_norwegian(barcode)
     if result.get('valid'):
         log = load_barcode_log()

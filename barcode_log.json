@@ -1,0 +1,83 @@
+[
+  {
+    "valid": true,
+    "barcode": "210",
+    "format": "numeric",
+    "length_cm": 210.0,
+    "producer": "manuell",
+    "product_code": "ukjent",
+    "timestamp": "2026-04-27T13:00:00.160303"
+  },
+  {
+    "valid": true,
+    "barcode": "210",
+    "format": "numeric",
+    "length_cm": 210.0,
+    "producer": "manual_entry",
+    "product_code": "ukjent",
+    "timestamp": "2026-04-27T13:00:47.093244"
+  },
+  {
+    "valid": true,
+    "barcode": "210",
+    "format": "numeric",
+    "length_cm": 210.0,
+    "producer": "manual_entry",
+    "product_code": "ukjent",
+    "timestamp": "2026-04-27T13:01:54.929012"
+  },
+  {
+    "valid": true,
+    "barcode": "210",
+    "format": "numeric",
+    "length_cm": 210.0,
+    "producer": "manual_entry",
+    "product_code": "ukjent",
+    "timestamp": "2026-04-27T13:03:09.980056"
+  },
+  {
+    "valid": true,
+    "barcode": "210",
+    "format": "numeric",
+    "length_cm": 210.0,
+    "producer": "manual_entry",
+    "product_code": "ukjent",
+    "timestamp": "2026-04-27T13:03:21.928172"
+  },
+  {
+    "valid": true,
+    "barcode": "210",
+    "format": "numeric",
+    "length_cm": 210.0,
+    "producer": "manual_entry",
+    "product_code": "ukjent",
+    "timestamp": "2026-04-27T13:04:19.494484"
+  },
+  {
+    "valid": true,
+    "barcode": "250",
+    "format": "numeric",
+    "length_cm": 250.0,
+    "producer": "manual_entry",
+    "product_code": "ukjent",
+    "timestamp": "2026-04-27T13:04:19.732593"
+  },
+  {
+    "valid": true,
+    "barcode": "210",
+    "format": "numeric",
+    "length_cm": 210.0,
+    "producer": "manual_entry",
+    "product_code": "ukjent",
+    "timestamp": "2026-04-27T13:04:24.533299"
+  },
+  {
+    "valid": true,
+    "barcode": "250",
+    "format": "numeric",
+    "length_cm": 250.0,
+    "producer": "manual_entry",
+    "product_code": "ukjent",
+    "timestamp": "2026-04-27T13:04:24.748240"
+  }
+]
