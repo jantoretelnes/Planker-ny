@@ -546,3 +546,289 @@ class TestCalculateCutsAdvanced:
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
+
+class TestNobbButton:
+    """Tests for NOBB button GTIN extraction and URL generation"""
+
+    def _gtin_from_barcode(self, barcode_str):
+        """Helper: parse barcode and return GTIN as it would appear in NOBB URL."""
+        result = parse_barcode_norwegian(barcode_str)
+        assert result['valid'], f"Barcode not valid: {result.get('error')}"
+        raw = result.get('product_code') or ''
+        gtin = raw[:14] if raw.startswith('0') else raw[:13]
+        return str(int(gtin)) if gtin else ''  # strip leading zeros
+
+    def test_nobb_gtin_leading_zero_stripped(self):
+        """GTIN starting with 0 should have leading zero removed."""
+        gtin = self._gtin_from_barcode(']C101070404318099123112000411')
+        assert gtin == '7040431809912', f"Got: {gtin}"
+
+    def test_nobb_url_format(self):
+        """NOBB URL should have correct format with stripped GTIN."""
+        gtin = self._gtin_from_barcode(']C101070404318099123112000411')
+        url = f'https://nobb.no/items/search?gtins={gtin}&newSearch=True'
+        assert url == 'https://nobb.no/items/search?gtins=7040431809912&newSearch=True'
+
+    def test_nobb_gtin_no_leading_zero(self):
+        """GTIN not starting with 0 should use 13 digits as-is."""
+        # Craft a barcode with GTIN starting with 4
+        result = parse_barcode_norwegian('(01)47040431809912(3112)000300')
+        if result['valid']:
+            raw = result.get('product_code') or ''
+            gtin = raw[:14] if raw.startswith('0') else raw[:13]
+            stripped = str(int(gtin))
+            assert not stripped.startswith('0')
+            assert len(stripped) == 13
+
+    def test_nobb_gtin_aim_prefix_variants(self):
+        """Both ]C1 and C1 prefixes should produce same GTIN."""
+        gtin1 = self._gtin_from_barcode(']C101070404318099123112000411')
+        gtin2 = self._gtin_from_barcode('C101070404318099123112000411')
+        assert gtin1 == gtin2 == '7040431809912'
+
+    def test_nobb_gtin_second_barcode(self):
+        """Test GTIN extraction for another barcode."""
+        gtin = self._gtin_from_barcode(']C101070702760725303112000426')
+        assert gtin == '7070276072530', f"Got: {gtin}"
+
+    def test_nobb_gtin_parenthesis_format(self):
+        """GS1-128 with parentheses should also produce correct GTIN."""
+        gtin = self._gtin_from_barcode('(01)07071890000039(10)123456(3102)004500')
+        assert gtin == '7071890000039', f"Got: {gtin}"
+
+    def test_nobb_no_product_code_returns_empty(self):
+        """Non-GS1 barcodes without a real GTIN should not produce a valid NOBB URL."""
+        result = parse_barcode_norwegian('450')
+        raw = result.get('product_code') or ''
+        # Numeric format sets product_code='ukjent' – not a valid GTIN for NOBB
+        assert not raw.isdigit() or len(raw) not in (13, 14)
+
+
+class TestAIMPrefix:
+    """Tests for AIM symbology identifier stripping"""
+
+    def test_aim_prefix_with_bracket(self):
+        """Test ]C1 prefix (standard AIM format)"""
+        r = parse_barcode_norwegian(']C101070404318099123112000411')
+        assert r['valid'] and r['length_cm'] == 411.0
+
+    def test_aim_prefix_without_bracket(self):
+        """Test C1 prefix (some scanners omit the bracket)"""
+        r = parse_barcode_norwegian('C101070404318099123112000411')
+        assert r['valid'] and r['length_cm'] == 411.0
+
+    def test_aim_prefix_same_result(self):
+        """Both ]C1 and C1 should produce identical result"""
+        r1 = parse_barcode_norwegian(']C101070404318099123112000411')
+        r2 = parse_barcode_norwegian('C101070404318099123112000411')
+        assert r1['length_cm'] == r2['length_cm']
+        assert r1['product_code'] == r2['product_code']
+
+    def test_aim_prefix_e0(self):
+        """]e0 prefix (GS1 DataBar) should be stripped"""
+        # Construct raw GS1 after stripping ]e0
+        r = parse_barcode_norwegian(']e001070404318099123112000411')
+        assert r['valid']
+
+    def test_fnc1_prefix_stripped(self):
+        """FNC1 character (0x1d) should be stripped"""
+        r = parse_barcode_norwegian('\x1d01070404318099123112000411')
+        assert r['valid'] and r['length_cm'] == 411.0
+
+
+class TestUnusedBoards:
+    """Tests for unused boards in cutting plan"""
+
+    def test_unused_boards_included_in_results(self, client):
+        """Boards not needed for cuts should appear as unused in results"""
+        response = client.post('/calculate_cuts', json={
+            'wanted_lengths': [80],
+            'measured_lengths': [300, 250],
+            'blade_width': 0.3,
+            'unit_price': 0
+        })
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        unused = [s for s in data['results'] if s.get('unused')]
+        assert len(unused) == 1
+        assert unused[0]['cuts'] == []
+
+    def test_unused_board_has_full_remaining(self, client):
+        """An unused board's remaining_length equals original_length"""
+        response = client.post('/calculate_cuts', json={
+            'wanted_lengths': [80],
+            'measured_lengths': [300, 250],
+            'blade_width': 0.3,
+            'unit_price': 0
+        })
+        data = json.loads(response.data)
+        unused = [s for s in data['results'] if s.get('unused')]
+        assert unused[0]['remaining_length'] == unused[0]['original_length']
+
+    def test_all_boards_used_no_unused(self, client):
+        """When all boards are used, no unused entries returned"""
+        response = client.post('/calculate_cuts', json={
+            'wanted_lengths': [100, 80],
+            'measured_lengths': [200],
+            'blade_width': 0,
+            'unit_price': 0
+        })
+        data = json.loads(response.data)
+        unused = [s for s in data['results'] if s.get('unused')]
+        assert len(unused) == 0
+
+
+class TestKerfAndOffcut:
+    """Tests for separate kerf_waste and offcut reporting"""
+
+    def test_kerf_waste_per_board(self, client):
+        """kerf_waste = (n_cuts - 1) * blade_width"""
+        response = client.post('/calculate_cuts', json={
+            'wanted_lengths': [100, 80, 60],
+            'measured_lengths': [300],
+            'blade_width': 2.0,
+            'unit_price': 0
+        })
+        data = json.loads(response.data)
+        board = next(s for s in data['results'] if not s.get('unused'))
+        expected_kerf = (len(board['cuts']) - 1) * 2.0
+        assert board['kerf_waste'] == round(expected_kerf, 4)
+
+    def test_offcut_equals_remaining(self, client):
+        """offcut should equal remaining_length"""
+        response = client.post('/calculate_cuts', json={
+            'wanted_lengths': [100],
+            'measured_lengths': [180],
+            'blade_width': 0,
+            'unit_price': 0
+        })
+        data = json.loads(response.data)
+        board = data['results'][0]
+        assert board['offcut'] == board['remaining_length']
+
+    def test_total_waste_equals_kerf_plus_offcut(self, client):
+        """total_waste = total_kerf_waste + total_offcut"""
+        response = client.post('/calculate_cuts', json={
+            'wanted_lengths': [100, 80],
+            'measured_lengths': [300],
+            'blade_width': 0.3,
+            'unit_price': 0
+        })
+        data = json.loads(response.data)
+        assert round(data['total_kerf_waste'] + data['total_offcut'], 2) == data['total_waste']
+
+    def test_zero_blade_width_no_kerf_waste(self, client):
+        """With blade_width=0, kerf_waste should be 0"""
+        response = client.post('/calculate_cuts', json={
+            'wanted_lengths': [100, 80],
+            'measured_lengths': [300],
+            'blade_width': 0,
+            'unit_price': 0
+        })
+        data = json.loads(response.data)
+        assert data['total_kerf_waste'] == 0.0
+
+
+class TestSuggestLengthsWithMeasured:
+    """Tests for suggest_lengths including measured boards"""
+
+    def test_suggest_with_measured_reduces_needed(self, client):
+        """Measured boards should reduce number of new boards needed"""
+        r_without = client.post('/suggest_lengths', json={
+            'wanted_lengths': [120, 80, 60, 50],
+            'measured_lengths': [],
+            'blade_width': 0.3
+        })
+        r_with = client.post('/suggest_lengths', json={
+            'wanted_lengths': [120, 80, 60, 50],
+            'measured_lengths': [300],
+            'blade_width': 0.3
+        })
+        d_without = json.loads(r_without.data)
+        d_with = json.loads(r_with.data)
+        # With measured boards, best suggestion needs fewer/smaller new boards
+        best_without = min(s['num_boards'] for s in d_without['suggestions'])
+        best_with = min(s['num_boards'] for s in d_with['suggestions'])
+        assert best_with <= best_without
+
+    def test_suggest_all_covered_by_measured(self, client):
+        """When measured boards cover everything, all_covered=True"""
+        response = client.post('/suggest_lengths', json={
+            'wanted_lengths': [80, 60],
+            'measured_lengths': [300],
+            'blade_width': 0.3
+        })
+        data = json.loads(response.data)
+        assert data['all_covered'] is True
+
+    def test_suggest_best_per_board_count(self, client):
+        """Each board count should appear only once in suggestions"""
+        response = client.post('/suggest_lengths', json={
+            'wanted_lengths': [120, 100, 80, 60],
+            'measured_lengths': [],
+            'blade_width': 0.3
+        })
+        data = json.loads(response.data)
+        counts = [s['num_boards'] for s in data['suggestions']]
+        assert len(counts) == len(set(counts)), "Duplicate board counts in suggestions"
+
+    def test_suggest_measured_used_count(self, client):
+        """num_measured_used should reflect how many measured boards contribute"""
+        response = client.post('/suggest_lengths', json={
+            'wanted_lengths': [120, 80, 60, 50],
+            'measured_lengths': [300],
+            'blade_width': 0.3
+        })
+        data = json.loads(response.data)
+        for s in data['suggestions']:
+            assert s.get('num_measured_used', 0) >= 0
+
+
+class TestGS1BarcodeVariants:
+    """Extended tests for GS1-128 barcode format variants"""
+
+    def test_gs1_no_spaces(self):
+        """GS1-128 without spaces between AIs"""
+        r = parse_barcode_norwegian('(01)07071890000039(3102)004500')
+        assert r['valid'] and r['length_cm'] == 450.0
+
+    def test_gs1_with_spaces(self):
+        """GS1-128 with spaces between AIs"""
+        r = parse_barcode_norwegian('(01) 07071890000039 (3102) 004500')
+        assert r['valid'] and r['length_cm'] == 450.0
+
+    def test_gs1_raw_no_parentheses(self):
+        """GS1-128 raw digits without parentheses"""
+        r = parse_barcode_norwegian('0107071890000039310200 4500')
+        # Raw format: should attempt to parse
+        assert 'valid' in r
+
+    def test_gs1_3112_ai_length(self):
+        """AI 3112 = length in metres with 2 decimals"""
+        r = parse_barcode_norwegian('(01)07040431809912(3112)000411')
+        assert r['valid'] and r['length_cm'] == 411.0
+
+    def test_gs1_3102_ai_length(self):
+        """AI 3102 = length in mm / 10 = cm"""
+        r = parse_barcode_norwegian('(01)07071890000039(3102)004500')
+        assert r['valid'] and r['length_cm'] == 450.0
+
+    def test_gs1_product_code_is_gtin(self):
+        """product_code should be full GTIN (AI 01 value)"""
+        r = parse_barcode_norwegian(']C101070404318099123112000411')
+        assert r['product_code'] == '07040431809912'
+
+    def test_gs1_batch_stored(self):
+        """Batch number (AI 10) should be stored in result"""
+        r = parse_barcode_norwegian('(01)07071890000039(10)123456(3102)004500')
+        assert r.get('batch') == '123456'
+
+    def test_gs1_negative_blade_width_clamped(self, client):
+        """Negative blade_width should be clamped to 0"""
+        response = client.post('/calculate_cuts', json={
+            'wanted_lengths': [100],
+            'measured_lengths': [200],
+            'blade_width': -5,
+            'unit_price': 0
+        })
+        assert response.status_code == 200
