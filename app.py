@@ -14,6 +14,7 @@ from reportlab.lib.units import cm
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image as RLImage, HRFlowable, KeepTogether
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
+import re
 
 app = Flask(__name__)
 
@@ -94,7 +95,6 @@ def parse_gs1_128(raw):
     result = {}
 
     # ── Format 1: parenthesised ──────────────────────────────────────────────
-    import re
     paren_pattern = re.compile(r'\((\d{2,4})\)\s*([\w\-]+)')
     matches = paren_pattern.findall(raw)
 
@@ -276,9 +276,17 @@ def parse_barcode_norwegian(barcode):
       4. Numeric cm value          450
       5. L-prefixed mm value       L4500
     """
-    import re
     barcode = barcode.strip()
     timestamp = datetime.now().isoformat()
+
+    # Strip AIM Symbology Identifiers (e.g. "]C1" for GS1 Code 128, "]e0" for GS1 DataBar)
+    # These are sometimes prepended by hardware/browser barcode scanners.
+    aim_match = re.match(r'^\](?:C1|e0|d2|Q3|J1)', barcode)
+    if aim_match:
+        barcode = barcode[aim_match.end():].strip()
+
+    # Also strip leading FNC1 character (\x1d / GS) if present
+    barcode = barcode.lstrip('\x1d').strip()
 
     # ── 1. GS1-128 (parenthesised or raw with known AIs) ────────────────────
     is_gs1 = '(' in barcode or (len(barcode) >= 18 and barcode.isdigit()) or bool(__import__('re').match(r'^\d{2,4}\s+', barcode))
@@ -420,8 +428,6 @@ def solve_cutting_stock_ffd(wanted_lengths, measured_lengths, blade_width):
             if suitable is None:
                 return {"error": f"Ingen planke er lang nok for kuttet {length} cm (lengste planke: {stock_pool[0]} cm)"}
             new_bin_length = stock_pool.pop(suitable)
-            # Calculate remaining after placing the cut
-            kerf_after = blade_width if len(sorted_lengths) > sorted_lengths.index(length) + 1 else 0
             new_bin = {
                 'cuts': [length],
                 'remaining_length': new_bin_length - length,
@@ -477,7 +483,7 @@ def suggest_optimal_lengths(wanted_lengths, blade_width, measured_lengths=None):
 
     sorted_wanted = sorted(wanted_lengths, reverse=True)
     measured_sorted = sorted(measured_lengths or [], reverse=True)
-    standard_lengths = [180, 210, 240, 270, 300, 330, 360, 390, 420, 450, 480, 510, 540, 570, 600]
+    standard_lengths = list(range(180, 601, 5))  # 180–600 cm in 5 cm intervals
 
     # First, greedily fill cuts using already-measured boards
     pre_bins = []
@@ -596,8 +602,11 @@ def render_cut_image(stock, blade_width, index):
     else:
         x = 0
         cut_colors = ['#2196F3', '#1565C0', '#42A5F5', '#0D47A1', '#64B5F6']
+        # Build color map by unique length (sorted desc) to match frontend legend
+        unique_lengths = sorted(set(stock['cuts']), reverse=True)
+        color_map = {length: cut_colors[i % len(cut_colors)] for i, length in enumerate(unique_lengths)}
         for ci, cut in enumerate(stock['cuts']):
-            color = cut_colors[ci % len(cut_colors)]
+            color = color_map[cut]
             ax.broken_barh([(x, cut)], (-0.4, 0.8), facecolors=color, edgecolors='white', linewidth=1)
             if cut > stock['original_length'] * 0.05:
                 ax.text(x + cut / 2, 0, f'{cut:.1f}', ha='center', va='center',
@@ -673,17 +682,24 @@ def suggest_lengths():
     if not wanted_lengths:
         return jsonify({'error': 'Ingen ønskede lengder angitt'}), 400
 
-    # Determine which wanted cuts are already covered by measured lengths.
-    # We greedily fit as many wanted cuts as possible into the measured boards,
-    # then treat the remainder as "still needed".
-    remaining_wanted = wanted_lengths[:]
-    if measured_lengths:
+    # suggest_optimal_lengths handles measured boards internally.
+    # It returns what's covered vs remaining and produces suggestions.
+    suggestions = suggest_optimal_lengths(
+        wanted_lengths,
+        blade_width,
+        measured_lengths=measured_lengths
+    )
+
+    # Determine remaining_wanted from the suggestions result
+    if suggestions and suggestions[0].get('all_covered_by_measured'):
+        remaining_wanted = []
+    else:
+        # Use _greedy_cover to find what measured boards already handle
         covered = _greedy_cover(
             sorted(wanted_lengths, reverse=True),
             sorted(measured_lengths, reverse=True),
             blade_width
-        )
-        # Remove covered cuts from the wanted list
+        ) if measured_lengths else []
         remaining_pool = [round(w, 4) for w in wanted_lengths]
         for c in covered:
             rc = round(c, 4)
@@ -691,17 +707,10 @@ def suggest_lengths():
                 remaining_pool.remove(rc)
         remaining_wanted = remaining_pool
 
-    # Pass all wanted lengths + measured lengths – suggest_optimal_lengths
-    # internally figures out what is already covered by measured boards
-    suggestions = suggest_optimal_lengths(
-        wanted_lengths,
-        blade_width,
-        measured_lengths=measured_lengths
-    )
     return jsonify({
         'suggestions': suggestions,
         'remaining_wanted': remaining_wanted,
-        'all_covered': len(remaining_wanted) == 0 and len(measured_lengths) > 0
+        'all_covered': len(remaining_wanted) == 0 and bool(measured_lengths)
     })
 
 
@@ -713,8 +722,10 @@ def calculate_cuts():
 
     wanted_lengths = data.get('wanted_lengths', [])
     measured_lengths = data.get('measured_lengths', [])
-    blade_width = data.get('blade_width', 0.3)
-    unit_price = data.get('unit_price', 0)
+    _bw = data.get('blade_width', 0.3)
+    blade_width = max(0.0, float(_bw if _bw is not None else 0.3))
+    _up = data.get('unit_price', 0)
+    unit_price = max(0.0, float(_up if _up is not None else 0))
 
     total_wanted = sum(wanted_lengths)
     total_measured = sum(measured_lengths)
@@ -747,10 +758,16 @@ def calculate_cuts():
             'unused': True
         })
 
-    # FIXED: correct waste calculation
-    total_kerfs = sum(max(0, len(s['cuts']) - 1) for s in results) * blade_width
-    total_used = sum(sum(s['cuts']) for s in results) + total_kerfs
-    total_waste = total_measured - total_used
+    # Calculate per-board kerf and offcut, then totals
+    for s in results:
+        num_kerfs = max(0, len(s['cuts']) - 1)
+        s['kerf_waste'] = round(num_kerfs * blade_width, 4)
+        s['offcut'] = round(s['remaining_length'], 4)
+
+    total_kerf_waste = round(sum(s['kerf_waste'] for s in results), 2)
+    total_offcut = round(sum(s['offcut'] for s in results), 2)
+    total_used = round(sum(sum(s['cuts']) for s in results) + total_kerf_waste, 2)
+    total_waste = round(total_kerf_waste + total_offcut, 2)
     total_price = unit_price * (total_measured / 100)
     waste_price = unit_price * (total_waste / 100)
 
@@ -759,7 +776,9 @@ def calculate_cuts():
         "total_wanted": round(total_wanted, 2),
         "total_measured": round(total_measured, 2),
         "total_used": round(total_used, 2),
-        "total_waste": round(total_waste, 2),
+        "total_kerf_waste": total_kerf_waste,
+        "total_offcut": total_offcut,
+        "total_waste": total_waste,
         "total_price": round(total_price, 2),
         "waste_price": round(waste_price, 2)
     })
@@ -817,8 +836,9 @@ def export_pdf():
         ['Meterpris', f'kr {unit_price:.2f}'],
         ['Total oensket lengde', f'{total_wanted:.1f} cm  ({total_wanted/100:.2f} m)'],
         ['Total maalt lengde', f'{total_measured:.1f} cm  ({total_measured/100:.2f} m)'],
-        ['Total brukt (kutt + sagblad)', f'{total_used:.1f} cm  ({total_used/100:.2f} m)'],
-        ['Avkapp/Svinn', f'{total_waste:.1f} cm  ({total_waste/100:.2f} m)'],
+        ['Sagblad-svinn', f'{data.get("total_kerf_waste", 0):.2f} cm'],
+        ['Avkapp', f'{data.get("total_offcut", 0):.1f} cm'],
+        ['Svinn totalt', f'{total_waste:.1f} cm  ({total_waste/100:.2f} m)'],
         ['Estimert totalpris', f'kr {total_price:.2f}'],
         ['Pris for svinn', f'kr {waste_price:.2f}'],
         ['Antall planker brukt', str(len(results))],
@@ -851,8 +871,8 @@ def export_pdf():
             ['Antall kutt', str(len(stock['cuts']))],
             ['Sagblad-kutt', str(num_kerfs)],
             ['Material til kutt', f'{used_for_cuts:.1f} cm'],
-            ['Material til sagblad', f'{num_kerfs * blade_width:.2f} cm'],
-            ['Avkapp', f'{stock["remaining_length"]:.1f} cm'],
+            ['Sagblad-svinn', f'{stock.get("kerf_waste", num_kerfs * blade_width):.2f} cm'],
+            ['Avkapp', f'{stock.get("offcut", stock["remaining_length"]):.1f} cm'],
         ]
         board_table = Table(board_data, colWidths=[7*cm, 9*cm])
         board_table.setStyle(TableStyle([
