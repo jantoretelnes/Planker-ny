@@ -437,62 +437,12 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="summary-item"><span>💸 Svinn-kostnad</span><strong>kr ${data.waste_price.toFixed(2)}</strong></div>
     </div>`;
 
-    // Same colors as render_cut_image in backend
-    const CUT_COLORS = ['#2196F3', '#1565C0', '#42A5F5', '#0D47A1', '#64B5F6'];
-
-    // Build unique cut lengths in the order they first appear across all boards
-    const uniqueLengths = [];
-    data.results.forEach(stock => {
-      if (!stock.unused) {
-        stock.cuts.forEach(cut => {
-          if (!uniqueLengths.includes(cut)) uniqueLengths.push(cut);
-        });
-      }
-    });
-
-    // Legend: one color per unique cut length, sorted longest first
-    const sortedLengths = [...uniqueLengths].sort((a, b) => b - a);
-    const colorMap = {};
-    sortedLengths.forEach((len, i) => { colorMap[len] = CUT_COLORS[i % CUT_COLORS.length]; });
-
-    // Count occurrences per length
-    const cutCounts = {};
-    data.results.forEach(stock => {
-      if (!stock.unused) stock.cuts.forEach(cut => { cutCounts[cut] = (cutCounts[cut] || 0) + 1; });
-    });
-
-    // Render legend box
-    let legendHtml = '<div class="cut-legend">';
-    sortedLengths.forEach(len => {
-      const color = colorMap[len];
-      const qty = cutCounts[len] || 1;
-      legendHtml += `<div class="cut-legend-item">
-        <span class="cut-legend-swatch" style="background:${color}"></span>
-        <span class="cut-legend-label">${qty}× ${parseFloat(len).toFixed(1)} cm</span>
-      </div>`;
-    });
-    legendHtml += `<div class="cut-legend-item">
-        <span class="cut-legend-swatch" style="background:#424242"></span>
-        <span class="cut-legend-label">Sagblad</span>
-      </div>`;
-    legendHtml += `<div class="cut-legend-item">
-        <span class="cut-legend-swatch" style="background:#EF5350"></span>
-        <span class="cut-legend-label">Avkapp</span>
-      </div>`;
-    legendHtml += '</div>';
-
-    html += `<div class="cut-summary-box">
-      <h3>✂️ Forklaring</h3>
-      ${legendHtml}
-    </div>`;
-
     // Per-board: full kuttplan (original) + stats
     data.results.forEach((stock, index) => {
       const isUnused = stock.unused === true;
       let cutsHtml = '';
       stock.cuts.forEach((cut, ci) => {
-        const color = colorMap[cut] || CUT_COLORS[0];
-        cutsHtml += `<li><span class="cut-dot" style="background:${color}"></span><span class="cut-num">#${ci + 1}</span> ${cut.toFixed(1)} cm</li>`;
+        cutsHtml += `<li><span class="cut-num">#${ci + 1}</span> ${cut.toFixed(1)} cm</li>`;
       });
 
       const unusedBadge = isUnused ? '<span class="unused-badge">Ikke i bruk</span>' : '';
@@ -572,9 +522,15 @@ document.addEventListener('DOMContentLoaded', function () {
     quantityInput.value = '1'; quantityInput.className = 'measured-quantity';
     quantityInput.placeholder = 'Antall'; quantityInput.style.width = '8ch';
 
-    const barcodeDisplay = document.createElement('span');
-    barcodeDisplay.style.cssText = 'font-size:0.8em; color:#666; margin-left:6px;';
-    barcodeDisplay.textContent = `(${parsed.barcode})`;
+    // NOBB-lenke med GTIN fra strekkoden
+    const gtin = parsed.product_code || parsed.producer || '';
+    const nobbBtn = document.createElement('a');
+    nobbBtn.href = `https://nobb.no/items/search?gtins=${gtin}&newSearch=True`;
+    nobbBtn.target = '_blank';
+    nobbBtn.rel = 'noopener noreferrer';
+    nobbBtn.className = 'nobb-btn';
+    nobbBtn.textContent = `🔍 ${gtin}`;
+    nobbBtn.title = `Søk opp GTIN ${gtin} på NOBB`;
 
     const removeButton = document.createElement('button');
     removeButton.className = 'remove-btn'; removeButton.textContent = 'Fjern';
@@ -582,7 +538,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     inputGroup.appendChild(lengthInput);
     inputGroup.appendChild(quantityInput);
-    inputGroup.appendChild(barcodeDisplay);
+    inputGroup.appendChild(nobbBtn);
     inputGroup.appendChild(removeButton);
     measuredLengthsContainer.appendChild(inputGroup);
   }
