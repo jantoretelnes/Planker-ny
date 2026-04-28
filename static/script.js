@@ -525,16 +525,19 @@ document.addEventListener('DOMContentLoaded', function () {
     // NOBB-lenke med GTIN fra strekkoden
     // product_code = full AI 01 value (14 digits), producer = first 7 digits only
     // Always use product_code (full GTIN), never fall back to producer
-    const rawGtin = parsed.product_code || '';
+    const rawGtin = (parsed.parsed_ais && parsed.parsed_ais['01']) || parsed.product_code || '';
     const gtin = rawGtin.startsWith('0') ? rawGtin.slice(0, 14) : rawGtin.slice(0, 13);
-    const gtinStripped = String(parseInt(gtin, 10));  // remove leading zeros
+    const gtinInt = parseInt(gtin, 10);
+    const gtinStripped = (!gtin || isNaN(gtinInt)) ? '' : String(gtinInt);
     const nobbBtn = document.createElement('a');
-    nobbBtn.href = `https://nobb.no/items/search?gtins=${gtinStripped}&newSearch=True`;
-    nobbBtn.target = '_blank';
-    nobbBtn.rel = 'noopener noreferrer';
-    nobbBtn.className = 'nobb-btn';
-    nobbBtn.textContent = '🔍';
-    nobbBtn.title = `Søk opp GTIN ${gtin} på NOBB`;
+    if (gtinStripped) {
+      nobbBtn.href = `https://nobb.no/items/search?gtins=${gtinStripped}&newSearch=True`;
+      nobbBtn.target = '_blank';
+      nobbBtn.rel = 'noopener noreferrer';
+      nobbBtn.className = 'nobb-btn';
+      nobbBtn.textContent = '🔍';
+      nobbBtn.title = `Søk opp GTIN ${gtinStripped} på NOBB`;
+    }
 
     const removeButton = document.createElement('button');
     removeButton.className = 'remove-btn'; removeButton.textContent = 'Fjern';
@@ -543,7 +546,7 @@ document.addEventListener('DOMContentLoaded', function () {
     inputGroup.appendChild(lengthInput);
     inputGroup.appendChild(quantityInput);
     inputGroup.appendChild(removeButton);
-    inputGroup.appendChild(nobbBtn);
+    if (gtinStripped) inputGroup.appendChild(nobbBtn);
     measuredLengthsContainer.appendChild(inputGroup);
   }
 
