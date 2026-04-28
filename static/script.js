@@ -527,8 +527,9 @@ document.addEventListener('DOMContentLoaded', function () {
     // Always use product_code (full GTIN), never fall back to producer
     const rawGtin = parsed.product_code || '';
     const gtin = rawGtin.startsWith('0') ? rawGtin.slice(0, 14) : rawGtin.slice(0, 13);
+    const gtinStripped = String(parseInt(gtin, 10));  // remove leading zeros
     const nobbBtn = document.createElement('a');
-    nobbBtn.href = `https://nobb.no/items/search?gtins=${gtin}&newSearch=True`;
+    nobbBtn.href = `https://nobb.no/items/search?gtins=${gtinStripped}&newSearch=True`;
     nobbBtn.target = '_blank';
     nobbBtn.rel = 'noopener noreferrer';
     nobbBtn.className = 'nobb-btn';
