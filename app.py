@@ -15,10 +15,29 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 import re
+import secrets
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_cors import CORS
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 
-BARCODE_LOG_FILE = 'barcode_log.json'
+# Restrict CORS to same origin in production; override via ALLOWED_ORIGINS env var
+_allowed_origins = os.environ.get('ALLOWED_ORIGINS', '').split(',')
+_allowed_origins = [o.strip() for o in _allowed_origins if o.strip()] or ['*']
+CORS(app, origins=_allowed_origins)
+
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["10 per second"],
+    storage_uri="memory://"
+)
+
+BARCODE_LOG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'barcode_log.json')
+MAX_LENGTHS_COUNT = 100      # max items in wanted/measured lists
+MAX_LENGTH_VALUE  = 20000.0  # max length in cm
 
 def load_barcode_log():
     if os.path.exists(BARCODE_LOG_FILE):
@@ -30,6 +49,8 @@ def load_barcode_log():
     return []
 
 def save_barcode_log(log):
+    # Keep only the last 100 entries (oldest overwritten)
+    log = log[-100:]
     with open(BARCODE_LOG_FILE, 'w', encoding='utf-8') as f:
         json.dump(log, f, ensure_ascii=False, indent=2)
 
@@ -78,6 +99,24 @@ GS1_AI_DEFINITIONS = {
 # Length-related AIs – used to extract plank length
 LENGTH_AI_PREFIXES = {'311', '312', '313', '321', '331', '332', '333'}
 
+# Pre-compiled regex patterns (module-level for performance)
+GS1_PAREN_PATTERN = re.compile(r'\((\d{2,4})\)\s*([\w\-]+)')
+
+# Pre-built PDF styles (module-level for performance)
+def _build_pdf_styles():
+    styles = getSampleStyleSheet()
+    return {
+        'title': ParagraphStyle('Title', parent=styles['Title'],
+                                fontSize=20, textColor=colors.HexColor('#1565C0'), spaceAfter=6),
+        'heading': ParagraphStyle('Heading', parent=styles['Heading2'],
+                                  fontSize=13, textColor=colors.HexColor('#1565C0'),
+                                  spaceBefore=12, spaceAfter=4),
+        'small': ParagraphStyle('Small', parent=styles['Normal'],
+                                fontSize=9, textColor=colors.grey),
+    }
+
+PDF_STYLES = _build_pdf_styles()
+
 
 def parse_gs1_128(raw):
     """
@@ -95,8 +134,7 @@ def parse_gs1_128(raw):
     result = {}
 
     # ── Format 1: parenthesised ──────────────────────────────────────────────
-    paren_pattern = re.compile(r'\((\d{2,4})\)\s*([\w\-]+)')
-    matches = paren_pattern.findall(raw)
+    matches = GS1_PAREN_PATTERN.findall(raw)
 
     if matches:
         for ai_code, value in matches:
@@ -646,6 +684,8 @@ def index():
     return render_template('index.html')
 
 
+@limiter.limit("10 per second")
+@limiter.limit("10 per second")
 @app.route('/parse_barcode', methods=['POST'])
 def parse_barcode():
     data = request.get_json(silent=True)
@@ -653,9 +693,11 @@ def parse_barcode():
         return jsonify({'error': 'Ugyldig eller manglende JSON'}), 400
     if not data:
         return jsonify({'valid': False, 'error': 'Strekkode er tom'}), 200
-    barcode = data.get('barcode', '').strip()
+    barcode = str(data.get('barcode', '')).strip()
     if not barcode:
         return jsonify({'valid': False, 'error': 'Strekkode er tom'}), 200
+    if len(barcode) > 35:
+        return jsonify({'valid': False, 'error': 'Strekkode er for lang (maks 35 tegn).'}), 400
     result = parse_barcode_norwegian(barcode)
     if result.get('valid'):
         log = load_barcode_log()
@@ -664,11 +706,13 @@ def parse_barcode():
     return jsonify(result)
 
 
+@limiter.limit("10 per second")
 @app.route('/get_barcode_history', methods=['GET'])
 def get_barcode_history():
     return jsonify({'barcodes': load_barcode_log()})
 
 
+@limiter.limit("10 per second")
 @app.route('/suggest_lengths', methods=['POST'])
 def suggest_lengths():
     data = request.get_json(silent=True)
@@ -679,6 +723,15 @@ def suggest_lengths():
     blade_width = data.get('blade_width', 0.3)
     if not wanted_lengths:
         return jsonify({'error': 'Ingen ønskede lengder angitt'}), 400
+    if len(wanted_lengths) > MAX_LENGTHS_COUNT or len(measured_lengths) > MAX_LENGTHS_COUNT:
+        return jsonify({'error': f'Maks {MAX_LENGTHS_COUNT} lengder tillatt.'}), 400
+    try:
+        wanted_lengths   = [float(x) for x in wanted_lengths]
+        measured_lengths = [float(x) for x in measured_lengths]
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Lengdeverdier må være tall.'}), 400
+    if any(x <= 0 or x > MAX_LENGTH_VALUE for x in wanted_lengths + measured_lengths):
+        return jsonify({'error': f'Lengder må være mellom 0 og {MAX_LENGTH_VALUE} cm.'}), 400
 
     # suggest_optimal_lengths handles measured boards internally.
     # It returns what's covered vs remaining and produces suggestions.
@@ -688,11 +741,13 @@ def suggest_lengths():
         measured_lengths=measured_lengths
     )
 
-    # Determine remaining_wanted from the suggestions result
+    # Derive remaining_wanted directly from suggest_optimal_lengths result
+    # (it already ran _greedy_cover internally – no need to repeat)
     if suggestions and suggestions[0].get('all_covered_by_measured'):
         remaining_wanted = []
+        all_covered = True
     else:
-        # Use _greedy_cover to find what measured boards already handle
+        # Extract what is NOT covered from the first suggestion's context
         covered = _greedy_cover(
             sorted(wanted_lengths, reverse=True),
             sorted(measured_lengths, reverse=True),
@@ -704,14 +759,16 @@ def suggest_lengths():
             if rc in remaining_pool:
                 remaining_pool.remove(rc)
         remaining_wanted = remaining_pool
+        all_covered = False
 
     return jsonify({
         'suggestions': suggestions,
         'remaining_wanted': remaining_wanted,
-        'all_covered': len(remaining_wanted) == 0 and bool(measured_lengths)
+        'all_covered': all_covered
     })
 
 
+@limiter.limit("10 per second")
 @app.route('/calculate_cuts', methods=['POST'])
 def calculate_cuts():
     data = request.get_json(silent=True)
@@ -724,6 +781,19 @@ def calculate_cuts():
     blade_width = max(0.0, float(_bw if _bw is not None else 0.3))
     _up = data.get('unit_price', 0)
     unit_price = max(0.0, float(_up if _up is not None else 0))
+
+    # Validate list sizes and individual values
+    if len(wanted_lengths) > MAX_LENGTHS_COUNT:
+        return jsonify({"error": f"Maks {MAX_LENGTHS_COUNT} ønskede lengder tillatt."}), 400
+    if len(measured_lengths) > MAX_LENGTHS_COUNT:
+        return jsonify({"error": f"Maks {MAX_LENGTHS_COUNT} målte lengder tillatt."}), 400
+    try:
+        wanted_lengths  = [float(x) for x in wanted_lengths]
+        measured_lengths = [float(x) for x in measured_lengths]
+    except (TypeError, ValueError):
+        return jsonify({"error": "Lengdeverdier må være tall."}), 400
+    if any(x <= 0 or x > MAX_LENGTH_VALUE for x in wanted_lengths + measured_lengths):
+        return jsonify({"error": f"Lengder må være mellom 0 og {MAX_LENGTH_VALUE} cm."}), 400
 
     total_wanted = sum(wanted_lengths)
     total_measured = sum(measured_lengths)
@@ -782,6 +852,7 @@ def calculate_cuts():
     })
 
 
+@limiter.limit("10 per second")
 @app.route('/visualize_cuts', methods=['POST'])
 def visualize_cuts():
     data = request.get_json(silent=True)
@@ -789,10 +860,27 @@ def visualize_cuts():
         return jsonify({"error": "Ugyldig eller manglende JSON"}), 400
     results = data.get('results', [])
     blade_width = data.get('blade_width', 0.3)
+
+    # Validate results to prevent abuse
+    if not isinstance(results, list) or len(results) > MAX_LENGTHS_COUNT:
+        return jsonify({"error": "Ugyldig resultatliste."}), 400
+    for stock in results:
+        if not isinstance(stock, dict):
+            return jsonify({"error": "Ugyldig planke-data."}), 400
+        cuts = stock.get('cuts', [])
+        if not isinstance(cuts, list) or len(cuts) > MAX_LENGTHS_COUNT:
+            return jsonify({"error": "Ugyldig kutt-liste."}), 400
+        if any(not isinstance(c, (int, float)) or c <= 0 or c > MAX_LENGTH_VALUE for c in cuts):
+            return jsonify({"error": "Ugyldige kuttverdier."}), 400
+        orig = stock.get('original_length', 0)
+        if not isinstance(orig, (int, float)) or orig <= 0 or orig > MAX_LENGTH_VALUE:
+            return jsonify({"error": "Ugyldig plankelengde."}), 400
+
     images = [render_cut_image(stock, blade_width, i) for i, stock in enumerate(results)]
     return jsonify({"images": images})
 
 
+@limiter.limit("10 per second")
 @app.route('/export_pdf', methods=['POST'])
 def export_pdf():
     data = request.get_json(silent=True)
@@ -800,27 +888,35 @@ def export_pdf():
         return jsonify({"error": "Ugyldig JSON"}), 400
 
     results = data.get('results', [])
-    blade_width = data.get('blade_width', 0.3)
-    unit_price = data.get('unit_price', 0)
-    total_wanted = data.get('total_wanted', 0)
-    total_measured = data.get('total_measured', 0)
-    total_used = data.get('total_used', 0)
-    total_waste = data.get('total_waste', 0)
-    total_price = data.get('total_price', 0)
-    waste_price = data.get('waste_price', 0)
+    if not isinstance(results, list) or len(results) > MAX_LENGTHS_COUNT:
+        return jsonify({"error": "Ugyldig resultatliste."}), 400
+
+    def _safe_float(val, default=0.0):
+        try:
+            v = float(val)
+            if v != v or abs(v) == float('inf'):  # NaN or Infinity check
+                return default
+            return max(0.0, v)
+        except (TypeError, ValueError):
+            return default
+
+    blade_width    = _safe_float(data.get('blade_width', 0.3), 0.3)
+    unit_price     = _safe_float(data.get('unit_price', 0))
+    total_wanted   = _safe_float(data.get('total_wanted', 0))
+    total_measured = _safe_float(data.get('total_measured', 0))
+    total_used     = _safe_float(data.get('total_used', 0))
+    total_waste    = _safe_float(data.get('total_waste', 0))
+    total_price    = _safe_float(data.get('total_price', 0))
+    waste_price    = _safe_float(data.get('waste_price', 0))
 
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4,
                             leftMargin=2*cm, rightMargin=2*cm,
                             topMargin=2*cm, bottomMargin=2*cm)
 
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('Title', parent=styles['Title'],
-                                  fontSize=20, textColor=colors.HexColor('#1565C0'), spaceAfter=6)
-    heading_style = ParagraphStyle('Heading', parent=styles['Heading2'],
-                                    fontSize=13, textColor=colors.HexColor('#1565C0'),
-                                    spaceBefore=12, spaceAfter=4)
-    small_style = ParagraphStyle('Small', parent=styles['Normal'], fontSize=9, textColor=colors.grey)
+    title_style   = PDF_STYLES['title']
+    heading_style = PDF_STYLES['heading']
+    small_style   = PDF_STYLES['small']
 
     story = []
     story.append(Paragraph("Plankeplukker'n – Kuttplan", title_style))
@@ -907,4 +1003,4 @@ def export_pdf():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=False, port=5000)

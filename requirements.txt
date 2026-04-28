@@ -3,3 +3,5 @@ matplotlib
 reportlab
 pytest
 gunicorn
+flask-limiter
+flask-cors
