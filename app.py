@@ -599,7 +599,7 @@ def render_cut_image(stock, blade_width, index):
         ax.text(stock['original_length'] / 2, 0,
                 f"Ikke i bruk – {stock['original_length']:.1f} cm",
                 ha='center', va='center', color='white', fontsize=9, fontweight='bold')
-        legend_elements = [mpatches.Patch(color='#90A4AE', label='Ikke i bruk')]
+        legend_elements = []
     else:
         x = 0
         cut_colors = ['#2196F3', '#1565C0', '#42A5F5', '#0D47A1', '#64B5F6']
@@ -623,13 +623,10 @@ def render_cut_image(stock, blade_width, index):
                 ax.text(x + stock['remaining_length'] / 2, 0,
                         f"Avkapp\n{stock['remaining_length']:.1f}", ha='center', va='center',
                         color='white', fontsize=7)
-        legend_elements = [
-            mpatches.Patch(color='#2196F3', label='Kutt'),
-            mpatches.Patch(color='#424242', label=f'Sagblad ({blade_width} cm)'),
-            mpatches.Patch(color='#EF5350', label='Avkapp'),
-        ]
+        legend_elements = []
 
-    ax.legend(handles=legend_elements, loc='upper right', fontsize=7, framealpha=0.8)
+    if legend_elements:
+        ax.legend(handles=legend_elements, loc='upper right', fontsize=7, framealpha=0.8)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     ax.spines['left'].set_visible(False)
