@@ -542,8 +542,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     inputGroup.appendChild(lengthInput);
     inputGroup.appendChild(quantityInput);
-    inputGroup.appendChild(nobbBtn);
     inputGroup.appendChild(removeButton);
+    inputGroup.appendChild(nobbBtn);
     measuredLengthsContainer.appendChild(inputGroup);
   }
 
