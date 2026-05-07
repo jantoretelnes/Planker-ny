@@ -912,7 +912,7 @@ def export_pdf():
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4,
                             leftMargin=2*cm, rightMargin=2*cm,
-                            topMargin=2*cm, bottomMargin=2*cm)
+                            topMargin=1*cm, bottomMargin=1*cm)
 
     title_style   = PDF_STYLES['title']
     heading_style = PDF_STYLES['heading']
@@ -985,7 +985,7 @@ def export_pdf():
 
         # KeepTogether ensures heading + description table + visual stay on same page
         board_block = KeepTogether([
-            Paragraph(f"Planke {i+1}  -  Maalt lengde: {stock['original_length']:.1f} cm", heading_style),
+            Paragraph(f"Planke {i+1}  -  Målt lengde: {stock['original_length']:.1f} cm", heading_style),
             Spacer(1, 0.2*cm),
             board_table,
             Spacer(1, 0.3*cm),
